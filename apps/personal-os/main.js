@@ -114,7 +114,7 @@ function setTheme(theme) {
 }
 
 function searchable(value) {
-  return [value.name, value.category, value.description, ...(value.tags || []), value.license, value.kind].filter(Boolean).join(' ').toLocaleLowerCase();
+  return [value.name, value.category, value.description, value.summary, value.recommendation, value.role, value.evidence, value.url, ...(value.tags || []), value.license, value.kind].filter(Boolean).join(' ').toLocaleLowerCase();
 }
 
 function matchesQuery(value) {
