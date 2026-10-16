@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="A personal workspace for independently built apps, shared capabilities and service integrations.">
+  <title>Personal OS — From Everything to Apps</title>
+  <link rel="stylesheet" href="./styles.css">
+  <script type="module" src="./main.js"></script>
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar" aria-label="Personal OS navigation">
+      <a class="brand" href="#overview" aria-label="Personal OS overview">
+        <span class="brand-mark" aria-hidden="true">O</span>
+        <span class="brand-copy"><strong>PERSONAL OS</strong><small>FROM EVERYTHING TO APPS</small></span>
+      </a>
+      <div class="sidebar-label">WORKSPACE</div>
+      <nav class="primary-nav" aria-label="Main navigation">
+        <button type="button" data-nav="overview" class="nav-item" aria-current="page"><span aria-hidden="true">◫</span> Overview</button>
+        <button type="button" data-nav="apps" class="nav-item"><span aria-hidden="true">▦</span> My apps <span id="app-nav-count" class="nav-count">2</span></button>
+        <button type="button" data-nav="integrations" class="nav-item"><span aria-hidden="true">⌘</span> Integrations <span id="integration-nav-count" class="nav-count">0</span></button>
+        <button type="button" data-nav="architecture" class="nav-item"><span aria-hidden="true">⌬</span> System map</button>
+      </nav>
+      <div class="sidebar-spacer"></div>
+      <section class="sidebar-status" aria-labelledby="workspace-status-title">
+        <span class="status-dot" aria-hidden="true"></span>
+        <div>
+          <strong id="workspace-status-title">Personal instance</strong>
+          <p>Local-first shell · no app secrets</p>
+        </div>
+      </section>
+      <div class="sidebar-footer">
+        <span>v0.1 · prototype</span>
+        <a href="https://github.com/Loofy147/From-everything-to-apps" target="_blank" rel="noopener noreferrer">Source ↗</a>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="breadcrumbs"><span>Workspace</span><span aria-hidden="true">/</span><strong id="page-crumb">Overview</strong></div>
+        <div class="topbar-actions">
+          <label class="searchbox">
+            <span aria-hidden="true">⌕</span>
+            <span class="sr-only">Search apps and integrations</span>
+            <input id="global-search" type="search" placeholder="Search apps, tools, capabilities…" autocomplete="off">
+            <kbd>/</kbd>
+          </label>
+          <button id="theme-toggle" class="icon-button" type="button" aria-label="Switch to dark theme" title="Switch theme"><span aria-hidden="true">◐</span></button>
+          <a class="avatar" href="#architecture" aria-label="Open personal OS system map">P</a>
+        </div>
+      </header>
+
+      <div id="global-status" class="global-status" role="status" aria-live="polite" hidden></div>
+
+      <section id="view-overview" class="view" aria-labelledby="overview-title">
+        <div class="welcome-row">
+          <div>
+            <p class="eyebrow">PERSONAL WORKSPACE · BUILD 001</p>
+            <h1 id="overview-title">One home for your working tools.</h1>
+            <p class="lede">A practical shell for apps, reusable capabilities and integrations. Start with what works, then connect services through replaceable adapters.</p>
+          </div>
+          <span class="local-pill"><span class="status-dot" aria-hidden="true"></span> Personal · local-first</span>
+        </div>
+
+        <section class="hero-panel">
+          <div class="hero-copy">
+            <p class="eyebrow">YOUR OPERATING WORKSPACE</p>
+            <h2>Build a personal OS out of useful, connected apps.</h2>
+            <p>Launch your current tools, keep track of reusable modules, and evaluate external services without tying the whole system to one vendor.</p>
+            <div class="hero-actions">
+              <button class="button button-primary" type="button" data-nav="apps">Open my apps <span aria-hidden="true">→</span></button>
+              <button class="button button-secondary" type="button" data-nav="integrations">Explore integrations</button>
+            </div>
+          </div>
+          <div class="hero-orbit" aria-hidden="true">
+            <div class="orbit orbit-outer"></div><div class="orbit orbit-inner"></div>
+            <div class="orbit-core">OS<span>+</span></div>
+            <div class="orbit-node node-one">A</div><div class="orbit-node node-two">K</div><div class="orbit-node node-three">↔</div>
+          </div>
+        </section>
+
+        <section class="metric-grid" aria-label="Workspace summary">
+          <article class="metric-card"><div class="metric-icon icon-violet" aria-hidden="true">▦</div><div><span>Usable local apps</span><strong id="metric-apps">2</strong><small>Launchable now</small></div></article>
+          <article class="metric-card"><div class="metric-icon icon-lime" aria-hidden="true">⌘</div><div><span>Integration options</span><strong id="metric-integrations">0</strong><small>Catalogued, not all connected</small></div></article>
+          <article class="metric-card"><div class="metric-icon icon-blue" aria-hidden="true">⬡</div><div><span>Shared capabilities</span><strong id="metric-modules">3</strong><small>First-party modules</small></div></article>
+          <article class="metric-card"><div class="metric-icon icon-amber" aria-hidden="true">＋</div><div><span>Personal shortcuts</span><strong id="metric-shortcuts">0</strong><small>Saved in this browser</small></div></article>
+        </section>
+
+        <div class="section-heading">
+          <div><p class="eyebrow">READY TO USE</p><h2>Your apps</h2><p>Independent apps, one entry point.</p></div>
+          <button class="text-link" type="button" data-nav="apps">All apps <span aria-hidden="true">→</span></button>
+        </div>
+        <div id="overview-app-grid" class="app-grid" aria-live="polite"></div>
+
+        <div class="section-heading section-heading-spaced">
+          <div><p class="eyebrow">SHARED FOUNDATION</p><h2>Capabilities that can power multiple apps</h2><p>Re-use stable contracts, not duplicated vendor-specific logic.</p></div>
+          <button class="text-link" type="button" data-nav="architecture">System map <span aria-hidden="true">→</span></button>
+        </div>
+        <div id="overview-module-grid" class="module-grid"></div>
+
+        <section class="boundary-note">
+          <div class="boundary-icon" aria-hidden="true">i</div>
+          <div><strong>Integration boundary</strong><p>The ChatGPT workspace can access certain service connectors, but a deployed website does not inherit those credentials. Service cards below open provider sites; direct API connections require an app-side OAuth flow or a secured backend adapter.</p></div>
+        </section>
+      </section>
+
+      <section id="view-apps" class="view" aria-labelledby="apps-title" hidden>
+        <div class="view-heading">
+          <div><p class="eyebrow">LAUNCHPAD</p><h1 id="apps-title">My apps</h1><p class="lede">Working prototypes and personal links, grouped in one launchpad.</p></div>
+          <button id="add-shortcut" class="button button-primary" type="button"><span aria-hidden="true">＋</span> Add shortcut</button>
+        </div>
+        <div class="filter-row">
+          <div class="filter-chips" role="group" aria-label="Filter apps">
+            <button class="filter-chip is-active" type="button" data-app-filter="all" aria-pressed="true">All</button>
+            <button class="filter-chip" type="button" data-app-filter="ready" aria-pressed="false">Usable now</button>
+            <button class="filter-chip" type="button" data-app-filter="shortcuts" aria-pressed="false">My shortcuts</button>
+          </div>
+          <span id="apps-result-count" class="muted-count"></span>
+        </div>
+        <div id="apps-grid" class="app-grid"></div>
+        <div id="apps-empty" class="empty-state" hidden><strong>No matching apps</strong><p>Clear the search or choose a different filter.</p></div>
+        <p class="privacy-footnote">Custom shortcuts are stored in this browser only. They do not sync to another device, and the Personal OS does not proxy or authenticate to external sites.</p>
+      </section>
+
+      <section id="view-integrations" class="view" aria-labelledby="integrations-title" hidden>
+        <div class="view-heading">
+          <div><p class="eyebrow">CONNECTOR WORKBENCH</p><h1 id="integrations-title">Integrations & open-source building blocks</h1><p class="lede">Review service connections, possible replacements and license boundaries before wiring them into the apps.</p></div>
+        </div>
+        <div class="connector-banner">
+          <div class="connector-banner-icon" aria-hidden="true">⌘</div>
+          <div><strong>Available does not mean connected to this site.</strong><p>“Workspace tool” means the connector can be used from the ChatGPT work session. It does not mean its token is available to this website. No credentials or customer data are stored by this catalog.</p></div>
+        </div>
+        <div class="integration-controls">
+          <div class="filter-chips" role="group" aria-label="Filter integrations by type">
+            <button class="filter-chip is-active" type="button" data-integration-filter="all" aria-pressed="true">All options</button>
+            <button class="filter-chip" type="button" data-integration-filter="workspace-tool" aria-pressed="false">Workspace tools</button>
+            <button class="filter-chip" type="button" data-integration-filter="open-source" aria-pressed="false">Open source</button>
+            <button class="filter-chip" type="button" data-integration-filter="self-hosted" aria-pressed="false">Self-hosted</button>
+          </div>
+          <span id="integration-result-count" class="muted-count"></span>
+        </div>
+        <div id="integrations-grid" class="integration-grid"></div>
+        <div id="integrations-empty" class="empty-state" hidden><strong>No matching integrations</strong><p>Try another name, capability or filter.</p></div>
+        <p class="privacy-footnote">License labels are an initial repository-level screen, not legal advice or a dependency-wide license audit. Recheck the exact release, source directories, components, assets and commercial/enterprise exceptions before reusing code.</p>
+      </section>
+
+      <section id="view-architecture" class="view" aria-labelledby="architecture-title" hidden>
+        <div class="view-heading">
+          <div><p class="eyebrow">SYSTEM MAP</p><h1 id="architecture-title">A universal foundation, without a universal monolith.</h1><p class="lede">Shared interfaces at the boundaries; domain logic stays inside the apps that need it.</p></div>
+        </div>
+        <div class="architecture-flow" aria-label="Proposed system layering">
+          <article class="architecture-layer layer-apps"><span class="layer-index">01</span><div><strong>Personal apps</strong><p>Khidma Desk · Archive Lab · future Notes, Work Board, Research and Media tools</p></div><span class="layer-status">2 usable</span></article>
+          <div class="layer-connector" aria-hidden="true">↓</div>
+          <article class="architecture-layer layer-contracts"><span class="layer-index">02</span><div><strong>Shared capability contracts</strong><p>Records · portable archives · identity boundary · files · jobs · notifications · search</p></div><span class="layer-status">3 modules</span></article>
+          <div class="layer-connector" aria-hidden="true">↓</div>
+          <article class="architecture-layer layer-adapters"><span class="layer-index">03</span><div><strong>Replaceable adapters</strong><p>Browser storage now; later Postgres, object storage, OAuth providers, workflow runners and AI gateways.</p></div><span class="layer-status layer-planned">Design gate</span></article>
+          <div class="layer-connector" aria-hidden="true">↓</div>
+          <article class="architecture-layer layer-services"><span class="layer-index">04</span><div><strong>External services & infrastructure</strong><p>GitHub · Vercel · Supabase or Neon · identity provider · automation and creative tools</p></div><span class="layer-status layer-planned">Not wired</span></article>
+        </div>
+        <div class="section-heading section-heading-spaced"><div><p class="eyebrow">IMPLEMENTATION GATES</p><h2>Build in this order</h2><p>Every layer should solve a real personal workflow, not just add infrastructure.</p></div></div>
+        <div class="roadmap-grid">
+          <article class="roadmap-card"><span class="roadmap-number">01</span><span class="roadmap-state state-done">In place</span><h3>Personal app shell</h3><p>App launcher, searchable connector catalog, safe personal shortcuts and a roadmap.</p><small>Current PR · static preview target</small></article>
+          <article class="roadmap-card"><span class="roadmap-number">02</span><span class="roadmap-state state-next">Next</span><h3>Identity & permissions</h3><p>Dedicated identity boundary, local/remote session contract, scoped grants, secret isolation and least privilege.</p><small>Before any cloud sync</small></article>
+          <article class="roadmap-card"><span class="roadmap-number">03</span><span class="roadmap-state state-next">Next</span><h3>Persistent shared data</h3><p>Portable Postgres schema and migration path, owner-scoped records, versioned archive, tested recovery.</p><small>Compare Supabase, Neon and self-hosted alternatives</small></article>
+          <article class="roadmap-card"><span class="roadmap-number">04</span><span class="roadmap-state state-later">Later</span><h3>Workflow and AI adapters</h3><p>Idempotent jobs, event log, optional Activepieces/n8n/Flowise services, and explicit per-tool authorization.</p><small>Keep services separable</small></article>
+          <article class="roadmap-card"><span class="roadmap-number">05</span><span class="roadmap-state state-later">Later</span><h3>Personal app portfolio</h3><p>Notes/knowledge, tasks/project board, file workspace, research, media workbench and service desk.</p><small>Promote only after complete workflows are tested</small></article>
+          <article class="roadmap-card"><span class="roadmap-number">06</span><span class="roadmap-state state-later">Later</span><h3>Backup, monitoring and release gates</h3><p>External backup restoration, error telemetry with consent, dependency/license inventory and rollback.</p><small>Before using important data</small></article>
+        </div>
+        <section class="boundary-note"><div class="boundary-icon" aria-hidden="true">✓</div><div><strong>Independence rule</strong><p>Prefer standard formats and protocols (HTTP/OAuth, JSON, PostgreSQL, OpenAPI, webhooks). Vendor SDKs stay behind interfaces so each provider can be replaced without rewriting app domain logic.</p></div></section>
+      </section>
+
+      <footer class="main-footer"><span>Personal OS · privately operated prototype</span><span>Local shortcut storage · no account service configured</span></footer>
+    </main>
+  </div>
+
+  <dialog id="shortcut-dialog" class="modal">
+    <form id="shortcut-form">
+      <div class="modal-heading"><div><p class="eyebrow">PERSONAL LINK</p><h2>Add a shortcut</h2></div><button id="close-shortcut" type="button" class="icon-button" aria-label="Close dialog">×</button></div>
+      <p class="modal-copy">Add a service URL or an app on another host. The shortcut is kept only in this browser and opens the URL you provide.</p>
+      <label for="shortcut-name">Name</label><input id="shortcut-name" name="name" required maxlength="60" autocomplete="off" placeholder="e.g. Personal notes">
+      <label for="shortcut-url">HTTPS or HTTP URL</label><input id="shortcut-url" name="url" type="url" required maxlength="500" placeholder="https://example.com">
+      <p class="field-hint">Only http:// and https:// links are accepted. Never paste an access token, password or private URL with embedded credentials.</p>
+      <label for="shortcut-category">Category</label><select id="shortcut-category" name="category"><option>Personal</option><option>Work</option><option>Creative</option><option>Research</option><option>Development</option></select>
+      <p id="shortcut-error" class="field-error" role="alert" hidden></p>
+      <div class="modal-actions"><button id="cancel-shortcut" class="button button-secondary" type="button">Cancel</button><button class="button button-primary" type="submit">Save shortcut</button></div>
+    </form>
+  </dialog>
+</body>
+</html>
