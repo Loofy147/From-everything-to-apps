@@ -253,15 +253,15 @@ try {
     return files.find((name) => name.startsWith('personal-os-backup-') && !name.endsWith('.crdownload'));
   }, 'Personal OS backup download', 15000);
   const backupText = await readFile(path.join(downloads, backupName), 'utf8');
-  const archive = JSON.parse(backupText);
-  assert.equal(archive.format, 'from-everything-to-apps/portable-archive');
-  assert.equal(archive.appId, 'personal-os');
-  assert.equal(archive.data.notes.length, 1);
-  assert.equal(archive.data.projects.length, 1);
-  assert.equal(archive.data.tasks.length, 1);
-  assert.equal(archive.data.research.length, 1);
-  assert.equal(archive.data.documents.length, 1);
-  assert.equal(archive.data.media.length, 1);
+  const personalOsArchive = JSON.parse(backupText);
+  assert.equal(personalOsArchive.format, 'from-everything-to-apps/portable-archive');
+  assert.equal(personalOsArchive.appId, 'personal-os');
+  assert.equal(personalOsArchive.data.notes.length, 1);
+  assert.equal(personalOsArchive.data.projects.length, 1);
+  assert.equal(personalOsArchive.data.tasks.length, 1);
+  assert.equal(personalOsArchive.data.research.length, 1);
+  assert.equal(personalOsArchive.data.documents.length, 1);
+  assert.equal(personalOsArchive.data.media.length, 1);
   console.log('PASS Personal OS data export produces a versioned SHA-256 archive of all six internal-app data collections');
 
   const beforeTamperedImport = await evaluate("localStorage.getItem('personal-os.suite-data.v1')");
