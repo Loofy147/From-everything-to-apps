@@ -247,3 +247,24 @@ test('clears records with one storage commit and preserves state if that write f
   assert.deepEqual(vault.listRecords(), []);
   assert.equal(vault.clearRecords(), false);
 });
+
+test('rejects accessor-based record inputs without executing getters', () => {
+  const { vault } = makeVault();
+  let getterCalled = false;
+  const malicious = {};
+  Object.defineProperty(malicious, 'title', {
+    enumerable: true,
+    get() { getterCalled = true; throw new Error('must not run'); },
+  });
+  assert.throws(() => vault.createRecord(malicious), (error) => error.code === 'invalid-input');
+  assert.equal(getterCalled, false);
+
+  const record = vault.createRecord({ title: 'Safe record' });
+  const patch = {};
+  Object.defineProperty(patch, 'title', {
+    enumerable: true,
+    get() { getterCalled = true; throw new Error('must not run'); },
+  });
+  assert.throws(() => vault.updateRecord(record.id, patch), (error) => error.code === 'invalid-input');
+  assert.equal(getterCalled, false);
+});
