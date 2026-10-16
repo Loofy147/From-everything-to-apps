@@ -583,7 +583,7 @@ async function exportBackup() {
       appId: APP_ID,
       schemaVersion: 1,
       data: state,
-      metadata: { product: 'Personal OS Apps', scope: 'notes-projects-tasks-research' },
+      metadata: { product: 'Personal OS Apps', scope: 'notes-projects-tasks-research-documents-media' },
       maxBytes: MAX_ARCHIVE_BYTES,
     });
     const serialized = await stringifyArchive(archive, { maxBytes: MAX_ARCHIVE_BYTES });
@@ -618,7 +618,7 @@ async function importBackup(file) {
       maxBytes: MAX_ARCHIVE_BYTES,
     });
     const validated = validateState(parsed.data);
-    const accepted = window.confirm('Restore this verified backup and replace the current Notes, Work Board and Research Library data? Export your current records first if you need to keep them.');
+    const accepted = window.confirm('Restore this verified backup and replace the current Notes, Work Board, Research, Documents and Media data? Export your current records first if you need to keep them.');
     if (!accepted) {
       announce('Restore cancelled. Current app data was not changed.');
       return;
@@ -830,10 +830,11 @@ async function loadTextFile(file) {
   try {
     const text = await file.text();
     if (text.includes(String.fromCharCode(0))) throw new Error('Binary files are not supported.');
+    if (text.length > 50000) throw new Error('The text file exceeds 50,000 characters. Split it into smaller documents before importing.');
     $('#document-id').value = '';
     $('#document-title').value = file.name.replace(/\.(md|txt)$/i, '').slice(0, 140);
     $('#document-format').value = format;
-    $('#document-content').value = text.slice(0, 50000);
+    $('#document-content').value = text;
     $('#document-tags').value = '';
     $('#document-form-title').textContent = 'Review imported document';
     $('#document-cancel-edit').hidden = true;
