@@ -1,3 +1,5 @@
+import { bootPersonalApps } from './apps.js';
+
 const SHORTCUTS_KEY = 'personal-os.shortcuts.v1';
 const THEME_KEY = 'personal-os.theme.v1';
 const $ = (selector, root = document) => root.querySelector(selector);
@@ -288,7 +290,7 @@ function renderAll() {
   renderIntegrationView();
 }
 
-const viewTitles = { overview: 'Overview', apps: 'My apps', integrations: 'Integrations', architecture: 'System map' };
+const viewTitles = { overview: 'Overview', apps: 'My apps', integrations: 'Integrations', architecture: 'System map', notes: 'Notes & Knowledge', board: 'Work Board', research: 'Research Library', data: 'Backup & Data' };
 function activateView(view, updateHash = true) {
   if (!Object.hasOwn(viewTitles, view)) view = 'overview';
   activeView = view;
@@ -402,6 +404,7 @@ function bindEvents() {
     }
   });
   $('#theme-toggle').addEventListener('click', () => setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'));
+  window.addEventListener('personal-os:datachange', () => renderAll());
   $$('[data-app-filter]').forEach((button) => button.addEventListener('click', () => {
     appFilter = button.dataset.appFilter;
     $$('[data-app-filter]').forEach((item) => {
@@ -461,6 +464,7 @@ async function boot() {
   bindEvents();
   try {
     await loadRegistry();
+    await bootPersonalApps();
     renderAll();
     const requestedView = window.location.hash.slice(1) || 'overview';
     activateView(requestedView, false);
