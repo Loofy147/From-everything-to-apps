@@ -10,8 +10,9 @@ The reference repository is research material—not an architecture we must pres
 |---|---|---|
 | Project charter and standards | Established | `docs/engineering-standards.md` |
 | Extraction and provenance process | Established | `docs/capability-extraction.md`, `docs/source-register.md` |
-| Portable Archive package | Candidate; core tests green | 15 local unit tests and remote CI pass; consuming-app integration, browser execution, and restore workflow remain pending |
-| Consumer application | Not started | Choose after a real workflow requires the tested capabilities |
+| Portable Archive package | Candidate; core tests green | 15 archive tests pass; now exercised by Record Vault; browser execution and real restore workflow remain pending |
+| Record Vault | Candidate; local record workflow implemented | 15 focused tests cover persistence boundary, import rejection, migrations and conflicts; actual browser storage and recovery behaviour still need manual checks |
+| Archive Lab | Prototype | Static browser harness is committed; manual browser acceptance checklist remains open |
 
 ## Engineering principles
 
@@ -39,7 +40,11 @@ npm ci
 npm test
 ```
 
-Run package tests alone with `npm run test:portable-archive`. No runtime npm dependencies are currently required.
+Run Portable Archive tests alone with `npm run test:portable-archive`. `npm run check` also syntax-checks package modules and the browser entry point. The core packages have no external runtime dependencies; Record Vault depends only on the local Portable Archive workspace package.
+
+## Try the consumer harness
+
+From the repository root, start a static server with `python3 -m http.server 4173` and open `http://localhost:4173/apps/archive-lab/`. Follow `apps/archive-lab/README.md`. This is a local-only prototype using browser `localStorage`; it is not encrypted or production-ready. The manual browser checklist has not yet been marked complete.
 
 ## Layout
 
