@@ -89,7 +89,10 @@ test('does not let recorded payments exceed an estimate or exist without one', (
   const payment = { id: 'p1', amountDzd: 100, method: 'cash', reference: '', recordedAt: t1 };
   expectCode(() => recordPayment(seed(), 'j1', payment), 'missing-estimate');
   const state = updateJobEstimate(seed(), 'j1', 100, t1);
-  expectCode(() => recordPayment(state, 'j1', payment), 'payment-exceeds-estimate');
+  const overpayment = { ...payment, amountDzd: 101 };
+  expectCode(() => recordPayment(state, 'j1', overpayment), 'payment-exceeds-estimate');
+  const exactPayment = recordPayment(state, 'j1', payment);
+  assert.equal(paymentTotal(exactPayment.jobs[0]), 100);
 });
 
 test('does not lower or remove an estimate below previously recorded payments', () => {
