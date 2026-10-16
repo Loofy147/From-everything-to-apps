@@ -108,6 +108,42 @@
         "Restore"
       ],
       "kind": "built-in"
+    },
+    {
+      "id": "files-documents",
+      "name": "Files & Documents",
+      "category": "Personal",
+      "description": "Create, edit, import and download Markdown/text documents in the shared local workspace.",
+      "href": "#files",
+      "status": "prototype",
+      "statusLabel": "Local app",
+      "storage": "Personal OS local store",
+      "icon": "F",
+      "theme": "blue",
+      "tags": [
+        "Markdown",
+        "Text files",
+        "Documents"
+      ],
+      "kind": "built-in"
+    },
+    {
+      "id": "media-workbench",
+      "name": "Media Workbench",
+      "category": "Creative",
+      "description": "Manage creative briefs, next actions, deliverable links and video/audio production stages.",
+      "href": "#media",
+      "status": "prototype",
+      "statusLabel": "Local app",
+      "storage": "Personal OS local store",
+      "icon": "M",
+      "theme": "amber",
+      "tags": [
+        "Creative briefs",
+        "Production",
+        "Deliverables"
+      ],
+      "kind": "built-in"
     }
   ],
   "modules": [
