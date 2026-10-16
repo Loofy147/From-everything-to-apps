@@ -246,6 +246,7 @@ function renderNotes() {
   if (!filtered.length) host.append(emptyMessage(filter ? 'No notes match this search.' : 'No notes yet. Add one to begin.'));
   for (const note of filtered) {
     const card = element('article', 'collection-card note-card' + (note.pinned ? ' is-pinned' : ''));
+    card.id = 'note-' + note.id;
     const header = element('div', 'collection-card-header');
     const titleWrap = element('div', 'collection-title-wrap');
     titleWrap.append(element('h3', '', note.title));
@@ -311,6 +312,7 @@ function renderProjects() {
   for (const project of [...state.projects].sort((a, b) => a.name.localeCompare(b.name))) {
     const related = state.tasks.filter((task) => task.projectId === project.id);
     const card = element('article', 'project-chip');
+    card.id = 'project-' + project.id;
     const copy = element('div', '');
     copy.append(element('strong', '', project.name), element('small', '', related.length + (related.length === 1 ? ' task' : ' tasks')));
     if (project.description) copy.append(element('p', '', project.description));
@@ -362,6 +364,7 @@ function resetTaskForm() {
 
 function renderTaskCard(task) {
   const card = element('article', 'task-card');
+  card.id = 'task-' + task.id;
   const top = element('div', 'task-card-top');
   top.append(element('span', 'priority-chip priority-' + task.priority, task.priority));
   if (task.dueDate) top.append(element('span', 'task-due', task.dueDate));
@@ -456,6 +459,7 @@ function renderResearch() {
   if (!records.length) host.append(emptyMessage(search || status !== 'all' ? 'No research items match these filters.' : 'No research items yet.'));
   for (const item of records) {
     const card = element('article', 'collection-card research-card');
+    card.id = 'research-' + item.id;
     const header = element('div', 'collection-card-header');
     const heading = element('div', 'collection-title-wrap');
     heading.append(element('h3', '', item.title));
@@ -796,6 +800,7 @@ function renderDocuments() {
   if (!records.length) host.append(emptyMessage(filter ? 'No documents match this search.' : 'No documents yet. Import a Markdown/text file or create one.'));
   for (const item of records) {
     const card = element('article', 'collection-card document-card');
+    card.id = 'document-' + item.id;
     const header = element('div', 'collection-card-header');
     const heading = element('div', 'collection-title-wrap');
     heading.append(element('h3', '', item.title + '.' + item.format));
@@ -866,6 +871,7 @@ function renderMedia() {
   }
   for (const item of records) {
     const card = element('article', 'collection-card media-card');
+    card.id = 'media-' + item.id;
     const header = element('div', 'collection-card-header');
     const heading = element('div', 'collection-title-wrap');
     heading.append(element('h3', '', item.title));
