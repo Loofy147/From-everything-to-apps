@@ -167,7 +167,7 @@ byId('export').addEventListener('click', async () => {
     document.body.append(anchor);
     anchor.click();
     anchor.remove();
-    URL.revokeObjectURL(url);
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
     announce('Archive exported. Keep it somewhere safe; it is not encrypted.');
   } catch (error) {
     announce(`Export failed: ${error.message}`, 'error');
@@ -201,14 +201,10 @@ byId('clear').addEventListener('click', () => {
   if (!vault) return;
   if (!window.confirm('Delete all records from this browser? This does not delete exported archive files.')) return;
   try {
-    const emptyArchivePromise = vault.exportArchive();
-    // Clearing uses the same validated domain state and persistence boundary.
-    const records = vault.listRecords();
-    for (const record of records) vault.deleteRecord(record.id);
+    vault.clearRecords();
     resetForm();
     render();
     announce('All records cleared from this browser.');
-    void emptyArchivePromise;
   } catch (error) {
     announce(`Could not clear records: ${error.message}`, 'error');
   }
