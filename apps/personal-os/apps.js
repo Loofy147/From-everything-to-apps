@@ -61,7 +61,20 @@ function boundedString(value, max, required = false) {
 }
 
 function validTimestamp(value) {
-  return typeof value === 'string' && Number.isFinite(Date.parse(value));
+  if (typeof value !== 'string') return false;
+  const date = new Date(value);
+  return Number.isFinite(date.valueOf()) && date.toISOString() === value;
+}
+
+function validDateOnly(value) {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const date = new Date(value + 'T00:00:00.000Z');
+  return Number.isFinite(date.valueOf()) && date.toISOString().slice(0, 10) === value;
+}
+
+function hasExactKeys(value, expected) {
+  return isRecord(value) && Object.keys(value).length === expected.length &&
+    expected.every((key) => Object.hasOwn(value, key));
 }
 
 function validId(value) {
@@ -94,7 +107,7 @@ function requireUniqueIds(items, label) {
 }
 
 function validateState(candidate) {
-  if (!isRecord(candidate) || candidate.schemaVersion !== 1) throw new Error('Unsupported Personal OS data schema.');
+  if (!hasExactKeys(candidate, ['schemaVersion', 'notes', 'projects', 'tasks', 'research', 'documents', 'media']) || candidate.schemaVersion !== 1) throw new Error('Unsupported Personal OS data schema.');
   for (const key of ['notes', 'projects', 'tasks', 'research', 'documents', 'media']) {
     if (!Array.isArray(candidate[key])) throw new Error('Personal OS data is missing the ' + key + ' collection.');
   }
@@ -107,27 +120,27 @@ function validateState(candidate) {
 
   const projectIds = new Set(candidate.projects.map((project) => project.id));
   for (const note of candidate.notes) {
-    if (!isRecord(note) || !boundedString(note.title, 140, true) ||
+    if (!hasExactKeys(note, ['id', 'title', 'body', 'tags', 'pinned', 'createdAt', 'updatedAt']) || !boundedString(note.title, 140, true) ||
       !boundedString(note.body, 30000, true) || !validTags(note.tags) ||
       typeof note.pinned !== 'boolean' || !validTimestamp(note.createdAt) ||
       !validTimestamp(note.updatedAt)) throw new Error('A note has invalid fields or timestamps.');
   }
   for (const project of candidate.projects) {
-    if (!isRecord(project) || !boundedString(project.name, 100, true) ||
+    if (!hasExactKeys(project, ['id', 'name', 'description', 'createdAt']) || !boundedString(project.name, 100, true) ||
       !boundedString(project.description, 1000) || !validTimestamp(project.createdAt)) {
       throw new Error('A project has invalid fields.');
     }
   }
   for (const task of candidate.tasks) {
-    if (!isRecord(task) || !boundedString(task.title, 180, true) ||
+    if (!hasExactKeys(task, ['id', 'title', 'projectId', 'priority', 'dueDate', 'notes', 'status', 'createdAt', 'updatedAt']) || !boundedString(task.title, 180, true) ||
       ![null, ...projectIds].includes(task.projectId) ||
       !PRIORITIES.includes(task.priority) || !STATUSES.includes(task.status) ||
-      !(task.dueDate === null || (typeof task.dueDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(task.dueDate))) ||
+      !(task.dueDate === null || validDateOnly(task.dueDate)) ||
       !boundedString(task.notes, 4000) || !validTimestamp(task.createdAt) ||
       !validTimestamp(task.updatedAt)) throw new Error('A task has invalid fields or references a missing project.');
   }
   for (const item of candidate.research) {
-    if (!isRecord(item) || !boundedString(item.title, 180, true) ||
+    if (!hasExactKeys(item, ['id', 'title', 'url', 'status', 'tags', 'summary', 'createdAt', 'updatedAt']) || !boundedString(item.title, 180, true) ||
       !(item.url === null || boundedString(item.url, 1000)) || !validSourceUrl(item.url) ||
       !RESEARCH_STATUSES.includes(item.status) || !validTags(item.tags) ||
       !boundedString(item.summary, 20000) || !validTimestamp(item.createdAt) ||
@@ -135,13 +148,13 @@ function validateState(candidate) {
   }
 
   for (const document of candidate.documents) {
-    if (!isRecord(document) || !boundedString(document.title, 140, true) ||
+    if (!hasExactKeys(document, ['id', 'title', 'format', 'content', 'tags', 'createdAt', 'updatedAt']) || !boundedString(document.title, 140, true) ||
       !DOCUMENT_FORMATS.includes(document.format) || !boundedString(document.content, 50000, true) ||
       !validTags(document.tags) || !validTimestamp(document.createdAt) ||
       !validTimestamp(document.updatedAt)) throw new Error('A document has invalid fields or content.');
   }
   for (const item of candidate.media) {
-    if (!isRecord(item) || !boundedString(item.title, 180, true) ||
+    if (!hasExactKeys(item, ['id', 'title', 'format', 'stage', 'brief', 'notes', 'outputUrl', 'tags', 'createdAt', 'updatedAt']) || !boundedString(item.title, 180, true) ||
       !MEDIA_FORMATS.includes(item.format) || !MEDIA_STAGES.includes(item.stage) ||
       !boundedString(item.brief, 12000, true) || !boundedString(item.notes, 4000) ||
       !(item.outputUrl === null || boundedString(item.outputUrl, 1000)) ||
