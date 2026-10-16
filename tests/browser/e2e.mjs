@@ -182,8 +182,8 @@ try {
   await evaluate("(() => { const search=document.querySelector('#global-search'); search.value='supabase'; search.dispatchEvent(new Event('input',{bubbles:true})); return true; })()");
   await wait(250);
   const integrationSearchState = await evaluate("({query:document.querySelector('#global-search')?.value,visible:!document.querySelector('#view-integrations')?.hidden,count:document.querySelectorAll('#integrations-grid .integration-card').length,names:[...document.querySelectorAll('#integrations-grid .integration-card h3')].map(node=>node.textContent),resultCount:document.querySelector('#integration-result-count')?.textContent,filter:[...document.querySelectorAll('[data-integration-filter]')].find(node=>node.classList.contains('is-active'))?.dataset.integrationFilter,status:document.querySelector('#global-status')?.textContent})");
-  assert.equal(integrationSearchState.count, 1, 'Personal OS integration search should leave exactly Supabase: ' + JSON.stringify(integrationSearchState));
-  assert.equal(integrationSearchState.names[0], 'Supabase', 'Personal OS integration result should be Supabase: ' + JSON.stringify(integrationSearchState));
+  assert.ok(integrationSearchState.count >= 1 && integrationSearchState.names.includes('Supabase'), 'Personal OS integration search should include Supabase: ' + JSON.stringify(integrationSearchState));
+  assert.equal(integrationSearchState.names[0], 'Supabase', 'Direct-name matches should rank ahead of cross-reference matches: ' + JSON.stringify(integrationSearchState));
   await evaluate("(() => { const search=document.querySelector('#global-search'); search.value=''; search.dispatchEvent(new Event('input',{bubbles:true})); document.querySelector('[data-nav=apps]').click(); return true; })()");
   await waitFor("!document.querySelector('#view-apps')?.hidden && document.querySelectorAll('#apps-grid > a.app-card').length === 8", 'Personal OS apps view');
   console.log('PASS integration filters/search distinguish workspace tools from app-side connections');
