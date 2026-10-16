@@ -135,7 +135,7 @@ function applyLanguage() {
   const labels = {
     languageCaption: ['language','language'], eyebrow: ['eyebrow','eyebrow'], heroTitle: ['hero-title','heroTitle'],
     heroCopy: ['hero-copy','heroCopy'], privacyTitle: ['privacy-title','privacyTitle'], privacyCopy: ['privacy-copy','privacyCopy'],
-    export: ['export','export'], clear: ['clear','clear'], customersSummary: ['customers-summary-label','customersSummary'],
+    export: ['export','export'], importLabel: ['import-label','import'], clear: ['clear','clear'], customersSummary: ['customers-summary-label','customersSummary'],
     jobsSummary: ['jobs-summary-label','jobsSummary'], paymentsSummary: ['payments-summary-label','paymentsSummary'],
     customerEyebrow: ['customer-eyebrow','customerEyebrow'], customerHeading: ['customer-heading','customerHeading'],
     customerName: ['customer-name-label','customerName'], customerPhone: ['customer-phone-label','customerPhone'],
@@ -153,6 +153,7 @@ function applyLanguage() {
   };
   for (const value of Object.values(labels)) setText(value[0], value[1]);
   $('import-file').setAttribute('aria-label', t('import'));
+  $('close-payment').setAttribute('aria-label', t('close'));
   $('import-file').title = t('import');
   $('export').title = t('export');
   $('language-select').setAttribute('aria-label', t('language'));
