@@ -46,7 +46,7 @@ function newId() {
 }
 
 function parseTags(value) {
-  return [...new Set(String(value || '').split(',').map((tag) => tag.trim().toLocaleLowerCase()).filter(Boolean))].slice(0, 12);
+  return [...new Set(String(value || '').split(',').map((tag) => tag.trim().toLocaleLowerCase().slice(0, 32)).filter(Boolean))].slice(0, 12);
 }
 
 function isRecord(value) {
@@ -123,7 +123,7 @@ function validateState(candidate) {
   }
   for (const item of candidate.research) {
     if (!isRecord(item) || !boundedString(item.title, 180, true) ||
-      !boundedString(item.url, 1000) || !validSourceUrl(item.url) ||
+      !(item.url === null || boundedString(item.url, 1000)) || !validSourceUrl(item.url) ||
       !RESEARCH_STATUSES.includes(item.status) || !validTags(item.tags) ||
       !boundedString(item.summary, 20000) || !validTimestamp(item.createdAt) ||
       !validTimestamp(item.updatedAt)) throw new Error('A research item has invalid fields or source URL.');
