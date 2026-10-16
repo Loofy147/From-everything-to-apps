@@ -167,7 +167,7 @@ try {
   await evaluate("(() => { const search=document.querySelector('#global-search'); search.value='supabase'; search.dispatchEvent(new Event('input',{bubbles:true})); return true; })()");
   await waitFor("document.querySelectorAll('#integrations-grid .integration-card').length === 1 && document.querySelector('#integrations-grid .integration-card h3')?.textContent === 'Supabase'", 'Personal OS integration search');
   await evaluate("(() => { const search=document.querySelector('#global-search'); search.value=''; search.dispatchEvent(new Event('input',{bubbles:true})); document.querySelector('[data-nav=apps]').click(); return true; })()");
-  await waitFor("!document.querySelector('#view-apps')?.hidden && document.querySelectorAll('#apps-grid > a.app-card').length === 6", 'Personal OS apps view');
+  await waitFor("!document.querySelector('#view-apps')?.hidden && document.querySelectorAll('#apps-grid > a.app-card').length === 8", 'Personal OS apps view');
   console.log('PASS integration filters/search distinguish workspace tools from app-side connections');
 
   await evaluate("document.querySelector('#add-shortcut').click(); true");
@@ -220,6 +220,27 @@ try {
   await evaluate("(() => { document.querySelector('#research-url').value='https://example.com/architecture'; document.querySelector('#research-status').value='actionable'; document.querySelector('#research-tags').value='architecture, evidence'; document.querySelector('#research-summary').value='Capture decisions with source links and explicit limitations.'; document.querySelector('#research-form').requestSubmit(); return true; })()");
   await waitFor("JSON.parse(localStorage.getItem('personal-os.suite-data.v1') || '{}').research?.length === 1 && document.querySelector('#research-list').textContent.includes('Research test source')", 'Research Library save and persistence');
 
+  await evaluate("document.querySelector('[data-nav=files]').click(); true");
+  await waitFor("!document.querySelector('#view-files')?.hidden", 'Files & Documents view');
+  await evaluate("(() => { document.querySelector('#document-title').value='E2E Decision Brief'; document.querySelector('#document-format').value='md'; document.querySelector('#document-tags').value='decisions, product'; document.querySelector('#document-content').value='# Decision brief\\n\\nKeep the application modular and portable.'; document.querySelector('#document-form').requestSubmit(); return true; })()");
+  await waitFor("JSON.parse(localStorage.getItem('personal-os.suite-data.v1') || '{}').documents?.length === 1 && document.querySelector('#documents-list').textContent.includes('E2E Decision Brief.md')", 'Files & Documents create and persistence');
+  await evaluate("document.querySelector('#documents-list button[data-action=document-download]').click(); true");
+  const documentName = await until(async () => {
+    const files = await readdir(downloads);
+    return files.find((name) => name === 'E2E-Decision-Brief.md' && !name.endsWith('.crdownload'));
+  }, 'individual Markdown download', 15000);
+  const downloadedDocument = await readFile(path.join(downloads, documentName), 'utf8');
+  assert.ok(downloadedDocument.includes('Keep the application modular and portable.'), 'Downloaded Markdown should preserve document content.');
+  console.log('PASS Files & Documents creates and exports a Markdown document');
+
+  await evaluate("document.querySelector('[data-nav=media]').click(); true");
+  await waitFor("!document.querySelector('#view-media')?.hidden", 'Media Workbench view');
+  await evaluate("(() => { document.querySelector('#media-project-title').value='E2E Product Launch Reel'; document.querySelector('#media-format').value='short-video'; document.querySelector('#media-stage').value='brief'; document.querySelector('#media-brief').value='Audience: potential customers. Show the product workflow and close with a clear call to action.'; document.querySelector('#media-next-action').value='Create a 20-second storyboard and collect product screenshots.'; document.querySelector('#media-output-url').value='https://example.com/creative-brief'; document.querySelector('#media-tags').value='product, launch'; document.querySelector('#media-form').requestSubmit(); return true; })()");
+  await waitFor("JSON.parse(localStorage.getItem('personal-os.suite-data.v1') || '{}').media?.length === 1 && document.querySelector('#media-list').textContent.includes('E2E Product Launch Reel')", 'Media Workbench create and persistence');
+  await evaluate("(() => { const select=document.querySelector('#media-list select[data-action=media-stage]'); select.value='script'; select.dispatchEvent(new Event('change',{bubbles:true})); return true; })()");
+  await waitFor("JSON.parse(localStorage.getItem('personal-os.suite-data.v1') || '{}').media?.[0]?.stage === 'script'", 'Media Workbench production stage update');
+  console.log('PASS Media Workbench stores creative briefs, output links and production stages');
+
   async function uploadPersonalOsBackup(text, filename) {
     const expression = "(async () => { const input=document.querySelector('#import-suite-backup'); const dt=new DataTransfer(); dt.items.add(new File([" + JSON.stringify(text) + "], " + JSON.stringify(filename) + ", {type:'application/json'})); input.files=dt.files; input.dispatchEvent(new Event('change',{bubbles:true})); return true; })()";
     await evaluate(expression);
@@ -239,7 +260,9 @@ try {
   assert.equal(archive.data.projects.length, 1);
   assert.equal(archive.data.tasks.length, 1);
   assert.equal(archive.data.research.length, 1);
-  console.log('PASS Personal OS data export produces a versioned SHA-256 archive of all internal-app data');
+  assert.equal(archive.data.documents.length, 1);
+  assert.equal(archive.data.media.length, 1);
+  console.log('PASS Personal OS data export produces a versioned SHA-256 archive of all six internal-app data collections');
 
   const beforeTamperedImport = await evaluate("localStorage.getItem('personal-os.suite-data.v1')");
   const tamperedArchive = JSON.parse(backupText);
@@ -252,7 +275,7 @@ try {
   await evaluate("document.querySelector('#clear-suite-data').click(); true");
   await waitFor("JSON.parse(localStorage.getItem('personal-os.suite-data.v1') || '{}').notes?.length === 0 && JSON.parse(localStorage.getItem('personal-os.suite-data.v1') || '{}').tasks?.length === 0", 'Personal OS clear app data');
   await uploadPersonalOsBackup(backupText, 'personal-os-backup-verified.json');
-  await waitFor("JSON.parse(localStorage.getItem('personal-os.suite-data.v1') || '{}').notes?.length === 1 && JSON.parse(localStorage.getItem('personal-os.suite-data.v1') || '{}').projects?.length === 1 && JSON.parse(localStorage.getItem('personal-os.suite-data.v1') || '{}').tasks?.[0]?.status === 'done' && JSON.parse(localStorage.getItem('personal-os.suite-data.v1') || '{}').research?.length === 1", 'Personal OS verified backup restoration', 15000);
+  await waitFor("JSON.parse(localStorage.getItem('personal-os.suite-data.v1') || '{}').notes?.length === 1 && JSON.parse(localStorage.getItem('personal-os.suite-data.v1') || '{}').projects?.length === 1 && JSON.parse(localStorage.getItem('personal-os.suite-data.v1') || '{}').tasks?.[0]?.status === 'done' && JSON.parse(localStorage.getItem('personal-os.suite-data.v1') || '{}').research?.length === 1 && JSON.parse(localStorage.getItem('personal-os.suite-data.v1') || '{}').documents?.length === 1 && JSON.parse(localStorage.getItem('personal-os.suite-data.v1') || '{}').media?.[0]?.stage === 'script'", 'Personal OS verified backup restoration', 15000);
   console.log('PASS Personal OS backup restores Notes, Projects, Tasks and Research after clearing the suite data');
 
   await cdp.send('Page.navigate', { url: web.url }, session);
