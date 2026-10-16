@@ -52,7 +52,7 @@ const messages = {
     deleted: 'Les données locales ont été effacées.', exported: 'Sauvegarde exportée. Elle n’est pas chiffrée.',
     imported: 'Sauvegarde restaurée.', importSame: 'Cette sauvegarde correspond déjà aux données locales.',
     importRejected: 'Import refusé. Les données existantes n’ont pas été remplacées.',
-    saveFailed: 'Enregistrement impossible. Les données en mémoire n’ont pas été avancées.', savedEstimate: 'Estimation enregistrée.', estimateLocked: 'L’estimation est verrouillée après la première saisie de paiement.',
+    saveFailed: 'Enregistrement impossible. Les données en mémoire n’ont pas été avancées.', savedEstimate: 'Estimation enregistrée.',
     storageConflict: 'Les données ont changé ailleurs. Rechargez la page avant une nouvelle modification.',
     exportFailed: 'Export impossible.', bootFailed: 'Impossible d’ouvrir les données locales. Le contenu existant n’a pas été réinitialisé.',
     clearConfirm: 'Effacer tous les clients et interventions de ce navigateur ? Cette action ne supprime pas les sauvegardes exportées.',
@@ -93,7 +93,7 @@ const messages = {
     deleted: 'تم مسح البيانات المحلية.', exported: 'تم تصدير النسخة الاحتياطية. الملف غير مشفّر.',
     imported: 'تم استرجاع النسخة الاحتياطية.', importSame: 'تطابق هذه النسخة البيانات المحلية الحالية.',
     importRejected: 'رُفض الاستيراد. لم يتم استبدال البيانات الحالية.',
-    saveFailed: 'تعذّر الحفظ. لم يتم تحديث الحالة في الذاكرة.', savedEstimate: 'تم حفظ المبلغ التقديري.', estimateLocked: 'يُقفل المبلغ التقديري بعد تسجيل أول دفعة.',
+    saveFailed: 'تعذّر الحفظ. لم يتم تحديث الحالة في الذاكرة.', savedEstimate: 'تم حفظ المبلغ التقديري.',
     storageConflict: 'تغيّرت البيانات في مكان آخر. أعد تحميل الصفحة قبل التعديل مجدداً.',
     exportFailed: 'تعذّر التصدير.', bootFailed: 'تعذّر فتح البيانات المحلية. لم يتم مسح البيانات الموجودة.',
     clearConfirm: 'هل تريد مسح كل الزبائن والأعمال من هذا المتصفح؟ لن تُحذف ملفات النسخ الاحتياطية المصدّرة.',
@@ -374,8 +374,7 @@ function renderJobs() {
     const estimateButton = textElement('button', 'button secondary', t('updateEstimate'));
     estimateButton.type = 'button';
     estimateButton.dataset.action = 'estimate';
-    estimateButton.disabled = job.payments.length > 0;
-    estimateButton.title = job.payments.length ? t('estimateLocked') : t('updateEstimate');
+    estimateButton.title = t('updateEstimate');
     estimateButton.addEventListener('click', () => {
       $('estimate-job-id').value = job.id;
       $('estimate-amount').value = job.quotedAmountDzd === null ? '' : String(job.quotedAmountDzd);
