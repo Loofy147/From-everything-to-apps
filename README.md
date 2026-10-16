@@ -15,7 +15,7 @@ The reference repository is research material—not an architecture we must pres
 | Khidma Core | Candidate | 12 domain tests cover customers, job references, status transitions, DZD limits and manual payment totals. |
 | Archive Lab | Prototype | Chromium acceptance passes create/edit/reload/export/clear/restore/tamper rejection; used to verify portable data boundaries. |
 | Khidma Desk | Prototype | Chromium covers invalid archive classes, storage-write failure, concurrent import conflict, and external-backup recovery after clearing application localStorage. User research, accessibility and cross-browser checks remain open. |
-| Personal OS shell | Prototype | App launcher, search, integration catalog, system map and local custom shortcuts. Direct API connections, identity, cloud sync and accessibility review remain open. |
+| Personal OS Apps | Prototype | One shell now contains Notes & Knowledge, Work Board, Research Library, Files & Documents, Media Workbench, plus Archive Lab and Khidma Desk. Six internal data collections share one local schema and verified Portable Archive backup/restore. Direct API connections, identity/cloud sync, accessibility and cross-browser review remain open. |
 
 ## Engineering principles
 
@@ -47,7 +47,7 @@ Run focused checks with `npm run test:portable-archive` or `npm run test:khidma-
 
 ## Try the consumer harness
 
-From the repository root, start a static server with `python3 -m http.server 4173` and open `http://localhost:4173/` for the Personal OS launchpad, or open `/apps/archive-lab/` and `/apps/khidma-desk/` directly. The shell supports app navigation, connector discovery, and local-only custom shortcuts. It does not yet authenticate or call external service APIs from the browser; service links open external sites. All included apps remain prototypes using unencrypted browser `localStorage` unless their README states otherwise. Automated Chromium acceptance does not establish production readiness; manual cross-browser, accessibility and user testing remain open.
+From the repository root, start a static server with `python3 -m http.server 4173` and open `http://localhost:4173/`. One Personal OS shell holds Notes & Knowledge, Work Board, Research Library, Files & Documents, Media Workbench and links to Archive Lab and Khidma Desk. Notes, tasks, projects, research sources, text/Markdown documents and creative briefs share a versioned local data store; Backup & Data uses the Portable Archive package to validate SHA-256 integrity and every record before restore. Shortcuts and theme preferences remain separate browser-local preferences and are not included in that data archive. Nothing is encrypted or synced, and the app does not yet authenticate or call external service APIs. Do not store sensitive or irreplaceable data. Automated Chromium acceptance does not establish production readiness; manual cross-browser, accessibility and user testing remain open.
 
 ## Layout
 
