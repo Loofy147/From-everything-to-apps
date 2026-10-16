@@ -1,4 +1,4 @@
-import { bootPersonalApps } from './apps.js';
+import { bootPersonalApps, getPersonalAppsSnapshot } from './apps.js';
 
 const SHORTCUTS_KEY = 'personal-os.shortcuts.v1';
 const THEME_KEY = 'personal-os.theme.v1';
@@ -306,7 +306,7 @@ function activateView(view, updateHash = true) {
   $('#page-crumb').textContent = viewTitles[view];
   document.title = viewTitles[view] + ' — Personal OS';
   if (updateHash && window.location.hash !== '#' + view) {
-    history.replaceState(null, '', '#' + view);
+    history.pushState({ view }, '', '#' + view);
   }
   globalQuery = $('#global-search').value.trim().toLocaleLowerCase();
   renderAll();
@@ -388,11 +388,20 @@ function removeShortcut(id) {
 
 function bindEvents() {
   $$('[data-nav]').forEach((button) => button.addEventListener('click', () => activateView(button.dataset.nav)));
-  $('#global-search').addEventListener('input', (event) => applySearch(event.currentTarget.value));
+  $('#global-search').addEventListener('input', (event) => { applySearch(event.currentTarget.value); renderQuickSearch(); });
   $('#global-search').addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && event.currentTarget.value) {
+    if (event.key === 'ArrowDown' && !$('#global-search-results').hidden) {
+      const first = $('#global-search-results .quick-search-result');
+      if (first) { event.preventDefault(); first.focus(); }
+    }
+    if (event.key === 'Escape' && !$('#global-search-results').hidden) {
+      $('#global-search-results').hidden = true;
+      event.currentTarget.setAttribute('aria-expanded', 'false');
+      event.currentTarget.focus();
+    } else if (event.key === 'Escape' && event.currentTarget.value) {
       event.currentTarget.value = '';
       applySearch('');
+      renderQuickSearch();
     }
   });
   document.addEventListener('keydown', (event) => {
@@ -435,6 +444,13 @@ function bindEvents() {
     if (event.target === event.currentTarget) closeShortcutDialog();
   });
   window.addEventListener('hashchange', () => activateView(window.location.hash.slice(1), false));
+  window.addEventListener('popstate', () => activateView(window.location.hash.slice(1) || 'overview', false));
+  document.addEventListener('click', (event) => {
+    if (!event.target.closest('.search-wrap')) {
+      $('#global-search-results').hidden = true;
+      $('#global-search').setAttribute('aria-expanded', 'false');
+    }
+  });
 }
 
 async function loadRegistry() {
@@ -468,6 +484,7 @@ async function boot() {
     await loadRegistry();
     await bootPersonalApps();
     renderAll();
+    renderQuickSearch();
     const requestedView = window.location.hash.slice(1) || 'overview';
     activateView(requestedView, false);
     if (!shortcutStorageHealthy) $('#add-shortcut').disabled = true;
