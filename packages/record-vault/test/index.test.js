@@ -232,3 +232,18 @@ test('does not overwrite storage modified by another context before import commi
   await assert.rejects(importPromise, (error) => error.code === 'concurrent-modification');
   assert.equal(storage.getItem('from-everything-to-apps.record-vault'), externalState);
 });
+
+test('clears records with one storage commit and preserves state if that write fails', () => {
+  const { vault, storage } = makeVault();
+  vault.createRecord({ title: 'First' });
+  vault.createRecord({ title: 'Second' });
+  const before = vault.listRecords();
+  const beforeStored = storage.getItem('from-everything-to-apps.record-vault');
+  storage.failNextWrite = true;
+  assert.throws(() => vault.clearRecords(), (error) => error.code === 'storage-write-failed');
+  assert.deepEqual(vault.listRecords(), before);
+  assert.equal(storage.getItem('from-everything-to-apps.record-vault'), beforeStored);
+  assert.equal(vault.clearRecords(), true);
+  assert.deepEqual(vault.listRecords(), []);
+  assert.equal(vault.clearRecords(), false);
+});
