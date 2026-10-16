@@ -82,6 +82,12 @@ function client(socket) {
       pending.delete(packet.id); clearTimeout(item.timer);
       if (packet.error) item.reject(new Error(item.method + ': ' + packet.error.message));
       else item.resolve(packet.result || {});
+    } else if (packet.method === 'Runtime.exceptionThrown' && packet.sessionId) {
+      const exception = packet.params?.exceptionDetails;
+      browserErrors.push('PAGE EXCEPTION: ' + (exception?.exception?.description || exception?.text || 'Unknown exception'));
+    } else if (packet.method === 'Runtime.consoleAPICalled' && packet.sessionId && packet.params?.type === 'error') {
+      const details = packet.params.args?.map((arg) => arg.value || arg.description || '').join(' ');
+      browserErrors.push('PAGE CONSOLE ERROR: ' + details);
     } else if (packet.method === 'Page.javascriptDialogOpening' && packet.sessionId) {
       void send('Page.handleJavaScriptDialog', { accept: true }, packet.sessionId).catch(() => {});
     }
