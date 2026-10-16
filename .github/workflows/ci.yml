@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   test:
-    name: Unit tests
+    name: Unit and browser acceptance tests
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -25,4 +25,5 @@ jobs:
           node-version: '22.16.0'
           cache: npm
       - run: npm ci
-      - run: npm run check
+      - name: Unit, syntax, and browser acceptance tests
+        run: npm run check
