@@ -276,8 +276,10 @@ try {
   await waitFor("JSON.parse(localStorage.getItem('personal-os.suite-data.v1') || '{}').notes?.length === 0 && JSON.parse(localStorage.getItem('personal-os.suite-data.v1') || '{}').tasks?.length === 0", 'Personal OS clear app data');
   await uploadPersonalOsBackup(backupText, 'personal-os-backup-verified.json');
   await waitFor("JSON.parse(localStorage.getItem('personal-os.suite-data.v1') || '{}').notes?.length === 1 && JSON.parse(localStorage.getItem('personal-os.suite-data.v1') || '{}').projects?.length === 1 && JSON.parse(localStorage.getItem('personal-os.suite-data.v1') || '{}').tasks?.[0]?.status === 'done' && JSON.parse(localStorage.getItem('personal-os.suite-data.v1') || '{}').research?.length === 1 && JSON.parse(localStorage.getItem('personal-os.suite-data.v1') || '{}').documents?.length === 1 && JSON.parse(localStorage.getItem('personal-os.suite-data.v1') || '{}').media?.[0]?.stage === 'script'", 'Personal OS verified backup restoration', 15000);
-  console.log('PASS Personal OS backup restores Notes, Projects, Tasks and Research after clearing the suite data');
+  console.log('PASS Personal OS backup restores all six data collections after clearing the suite data');
 
+  // Keep the Archive Lab download assertion isolated from the Personal OS backup file.
+  await rm(path.join(downloads, backupName), { force: true });
   await cdp.send('Page.navigate', { url: web.url }, session);
   await waitFor("document.readyState === 'complete' && document.querySelector('#status')?.textContent.includes('Local record store ready')", 'Archive Lab boot');
   console.log('PASS browser boot and local store initialization');
