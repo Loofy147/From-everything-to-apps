@@ -207,10 +207,12 @@ try {
   await waitFor("JSON.parse(localStorage.getItem('khidma-desk.state.v1') || '{}').jobs?.some(j => j.status === 'scheduled')", 'Khidma status transition');
   await evaluate("(() => { document.querySelector('.job-card button[data-action=payment]').click(); document.querySelector('#payment-amount').value='3000'; document.querySelector('#payment-method').value='cash'; document.querySelector('#payment-reference').value='E2E receipt'; document.querySelector('#payment-form').requestSubmit(); return true; })()");
   await waitFor("JSON.parse(localStorage.getItem('khidma-desk.state.v1') || '{}').jobs?.some(j => j.payments?.length === 1 && j.payments[0].amountDzd === 3000)", 'Khidma manual payment record');
+  await evaluate("(() => { document.querySelector('.job-card button[data-action=estimate]').click(); document.querySelector('#estimate-amount').value='15000'; document.querySelector('#estimate-form').requestSubmit(); return true; })()");
+  await waitFor("JSON.parse(localStorage.getItem('khidma-desk.state.v1') || '{}').jobs?.some(j => j.quotedAmountDzd === 15000 && j.payments?.length === 1 && j.payments[0].amountDzd === 3000)", 'Khidma estimate update after deposit');
   await cdp.send('Page.reload', {}, session);
   await waitFor("document.querySelector('#status')?.dataset.ready === 'true'", 'Khidma reload');
-  await waitFor("document.querySelector('.job-card h3')?.textContent === 'Repair air conditioner' && document.querySelector('.payment-entry') !== null", 'Khidma job and payment restore after reload');
-  console.log('PASS status transition, manual payment and reload persistence');
+  await waitFor("document.querySelector('.job-card h3')?.textContent === 'Repair air conditioner' && document.querySelector('.payment-entry') !== null && JSON.parse(localStorage.getItem('khidma-desk.state.v1') || '{}').jobs?.some(j => j.quotedAmountDzd === 15000)", 'Khidma job, payment and updated estimate restore after reload');
+  console.log('PASS status transition, payment, estimate update after deposit and reload persistence');
 
   await evaluate("document.querySelector('#export').click(); true");
   const khidmaStateBeforeExport = await evaluate("localStorage.getItem('khidma-desk.state.v1')");
