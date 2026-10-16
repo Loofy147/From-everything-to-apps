@@ -960,6 +960,18 @@ function submitMediaProject(event) {
 }
 
 
+export function getPersonalAppsSnapshot() {
+  return {
+    notes: state.notes.map(({ id, title, body, tags, pinned, updatedAt }) => ({ id, title, body, tags, pinned, updatedAt })),
+    projects: state.projects.map(({ id, name, description, createdAt }) => ({ id, name, description, createdAt })),
+    tasks: state.tasks.map(({ id, title, projectId, priority, dueDate, notes, status, updatedAt }) => ({ id, title, projectId, priority, dueDate, notes, status, updatedAt })),
+    research: state.research.map(({ id, title, url, summary, tags, status, updatedAt }) => ({ id, title, url, summary, tags, status, updatedAt })),
+    documents: state.documents.map(({ id, title, format, tags, updatedAt }) => ({ id, title, format, tags, updatedAt })),
+    media: state.media.map(({ id, title, format, stage, notes, outputUrl, tags, updatedAt }) => ({ id, title, format, stage, notes, outputUrl, tags, updatedAt })),
+    storageHealthy,
+  };
+}
+
 export async function bootPersonalApps() {
   loadState();
   $('#note-form').addEventListener('submit', submitNote);
