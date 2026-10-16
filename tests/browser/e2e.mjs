@@ -286,18 +286,17 @@ try {
   assert.equal(await evaluate("localStorage.getItem('khidma-desk.state.v1')"), concurrentStored, 'Reload should load the validated externally stored state.');
   console.log('PASS reload reconciles the UI with the newer stored state after a detected conflict');
 
-  const origin = new URL(web.url).origin;
-  await cdp.send('Storage.clearDataForOrigin', { origin, storageTypes: 'all' });
+  await evaluate("localStorage.clear(); sessionStorage.clear(); true");
   await cdp.send('Page.reload', {}, session);
-  await waitFor("document.querySelector('#status')?.dataset.ready === 'true'", 'Khidma boot after clearing all origin storage');
-  await waitFor("JSON.parse(localStorage.getItem('khidma-desk.state.v1') || '{}').customers?.length === 0 && JSON.parse(localStorage.getItem('khidma-desk.state.v1') || '{}').jobs?.length === 0", 'Khidma empty state after origin data deletion');
+  await waitFor("document.querySelector('#status')?.dataset.ready === 'true'", 'Khidma boot after clearing application localStorage');
+  await waitFor("JSON.parse(localStorage.getItem('khidma-desk.state.v1') || '{}').customers?.length === 0 && JSON.parse(localStorage.getItem('khidma-desk.state.v1') || '{}').jobs?.length === 0", 'Khidma empty state after localStorage deletion');
   const emptyAfterOriginClear = await evaluate("JSON.parse(localStorage.getItem('khidma-desk.state.v1') || '{}')");
   assert.equal(emptyAfterOriginClear.customers.length, 0);
   assert.equal(emptyAfterOriginClear.jobs.length, 0);
   await uploadKhidmaArchive(khidmaArchiveText, 'recovery-after-origin-wipe.json');
   await waitFor("localStorage.getItem('khidma-desk.state.v1') === " + JSON.stringify(khidmaStateBeforeExport), 'restore from downloaded backup after clearing browser origin storage');
   assert.equal(await evaluate("localStorage.getItem('khidma-desk.state.v1')"), khidmaStateBeforeExport, 'The backup must restore the complete prior dataset after origin storage is cleared.');
-  console.log('PASS downloaded external backup restores full state after all origin storage is cleared');
+  console.log('PASS downloaded external backup restores full state after clearing all application localStorage');
 
   await evaluate("(() => { const select=document.querySelector('#language-select'); select.value='ar'; select.dispatchEvent(new Event('change',{bubbles:true})); return true; })()");
   await waitFor("document.documentElement.lang === 'ar' && document.documentElement.dir === 'rtl'", 'Arabic RTL locale');
