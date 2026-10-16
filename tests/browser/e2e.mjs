@@ -290,12 +290,12 @@ try {
   await cdp.send('Page.reload', {}, session);
   await waitFor("document.querySelector('#status')?.dataset.ready === 'true'", 'Khidma boot after clearing application localStorage');
   await waitFor("JSON.parse(localStorage.getItem('khidma-desk.state.v1') || '{}').customers?.length === 0 && JSON.parse(localStorage.getItem('khidma-desk.state.v1') || '{}').jobs?.length === 0", 'Khidma empty state after localStorage deletion');
-  const emptyAfterOriginClear = await evaluate("JSON.parse(localStorage.getItem('khidma-desk.state.v1') || '{}')");
-  assert.equal(emptyAfterOriginClear.customers.length, 0);
-  assert.equal(emptyAfterOriginClear.jobs.length, 0);
-  await uploadKhidmaArchive(khidmaArchiveText, 'recovery-after-origin-wipe.json');
-  await waitFor("localStorage.getItem('khidma-desk.state.v1') === " + JSON.stringify(khidmaStateBeforeExport), 'restore from downloaded backup after clearing browser origin storage');
-  assert.equal(await evaluate("localStorage.getItem('khidma-desk.state.v1')"), khidmaStateBeforeExport, 'The backup must restore the complete prior dataset after origin storage is cleared.');
+  const emptyAfterLocalStorageClear = await evaluate("JSON.parse(localStorage.getItem('khidma-desk.state.v1') || '{}')");
+  assert.equal(emptyAfterLocalStorageClear.customers.length, 0);
+  assert.equal(emptyAfterLocalStorageClear.jobs.length, 0);
+  await uploadKhidmaArchive(khidmaArchiveText, 'recovery-after-localstorage-wipe.json');
+  await waitFor("localStorage.getItem('khidma-desk.state.v1') === " + JSON.stringify(khidmaStateBeforeExport), 'restore from downloaded backup after clearing application localStorage');
+  assert.equal(await evaluate("localStorage.getItem('khidma-desk.state.v1')"), khidmaStateBeforeExport, 'The backup must restore the complete prior dataset after application localStorage is cleared.');
   console.log('PASS downloaded external backup restores full state after clearing all application localStorage');
 
   await evaluate("(() => { const select=document.querySelector('#language-select'); select.value='ar'; select.dispatchEvent(new Event('change',{bubbles:true})); return true; })()");
