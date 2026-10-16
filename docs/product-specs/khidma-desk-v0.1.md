@@ -52,10 +52,10 @@ A self-employed service provider or tiny repair/installation business needs to k
 - [x] Estimated and paid amounts use non-negative whole-DZD integers; payment total cannot exceed the estimate (domain tests).
 - [x] An estimate can be added after job creation and safely increased after payment, but cannot be reduced below payments already recorded (domain and Chromium tests).
 - [x] Chromium CI: a simulated localStorage quota error on customer creation preserves both the prior stored state and the visible customer list; successful writes persist through the same one-key commit path.
-- [x] Page reload restores a customer, job and payment record in Chromium; CI also restores a downloaded external backup after clearing all origin storage. Manual recovery outside Chromium remains open.
+- [x] Page reload restores a customer, job and payment record in Chromium; CI also restores a downloaded external backup after clearing all application localStorage. Manual recovery outside Chromium remains open.
 - [x] Valid archive restore round-trips the complete serialized customer/job/payment state in Chromium.
 - [x] Chromium CI rejects tampered, wrong-app, future-schema, oversized and domain-invalid imports without replacing the pre-existing stored state.
 - [x] Chromium CI: a storage-write failure does not advance the visible or persisted customer state; a detected concurrent change during asynchronous import is preserved and the stale import is rejected.
-- [x] Chromium e2e covers customer/job/payment, transitions, exact archive round-trip, invalid import classes, storage errors/conflicts, origin-storage wipe recovery, 390px French LTR and Arabic RTL layouts.
+- [x] Chromium e2e covers customer/job/payment, transitions, exact archive round-trip, invalid import classes, storage errors/conflicts, application-localStorage wipe recovery, 390px French LTR and Arabic RTL layouts.
 - [ ] Keyboard interaction and focus-restoration checks, plus a screen-reader audit across French LTR, Arabic RTL and mixed-direction values, remain open for manual verification.
 - [ ] Manual testing with at least two browsers, local backup recovery and prospective-user workflow validation remain open before pilot.
