@@ -1,40 +1,63 @@
 # From Everything to Apps
 
-**Purpose:** turn useful ideas and small capabilities from the `Loofy147/everything` reference fork into independently engineered, reliable, portable applications.
+**Purpose:** turn useful ideas and small capabilities from the [reference fork](https://github.com/Loofy147/everything) into independently engineered, reliable, portable applications.
 
-The reference repository is an input for research—not an architecture we must preserve and not a reason to copy whole applications. We will extract small units of value, specify the behaviour we need, and then choose deliberately whether to reuse, adapt, reimplement, or reject each candidate.
+The reference repository is research material—not an architecture we must preserve or a reason to copy whole applications. We extract small units of value, specify the behaviour we need, then choose deliberately whether to reuse, adapt, reimplement, or reject each candidate.
+
+## Current state
+
+| Area | Status | Evidence / next gate |
+|---|---|---|
+| Project charter and standards | Established | `docs/engineering-standards.md` |
+| Extraction and provenance process | Established | `docs/capability-extraction.md`, `docs/source-register.md` |
+| Portable Archive package | Implemented; candidate | 14 local unit tests pass; remote CI and application integration remain pending |
+| Consumer application | Not started | Choose after a real workflow requires the tested capabilities |
 
 ## Engineering principles
 
 - **Behaviour before code:** start from a user outcome, acceptance criteria, and failure cases.
-- **Small, justified abstractions:** do not build a universal framework before multiple real use cases require one.
+- **Small, justified abstractions:** do not build a universal framework before real use cases require one.
 - **Durability by evidence:** test persistence, interrupted operations, export/import, backups, and recovery.
-- **Portable by default:** keep domain logic independent of Puter or any single vendor; isolate external services behind explicit adapters.
+- **Portable by default:** keep domain logic independent of Puter or a single vendor; isolate external services behind adapters.
 - **Secure defaults:** validate untrusted input, enforce access boundaries, avoid secret exposure, and minimize collected data.
-- **License and provenance hygiene:** record source revisions, preserve notices, review transitive dependencies and assets, and prefer clean-room reimplementation when that is simpler or safer.
-- **Release discipline:** reproducible builds, automated tests, dependency pinning, security review, and honest release status.
-- **Algeria-aware, not Algeria-limited:** where relevant, support Arabic RTL, French, DZD, mobile-first usage, accessible exports, and offline-tolerant workflows without hardcoding local assumptions into core logic.
+- **License and provenance hygiene:** record source revisions, preserve notices, review transitive packages and assets.
+- **Release discipline:** reproducible builds, automated tests, dependency review, and honest status labels.
+- **Algeria-aware, not Algeria-limited:** where relevant, support Arabic RTL, French, DZD, mobile-first use, accessible exports, and offline-tolerant workflows without hardcoding local assumptions into core logic.
 
-## Current plan
+## First capability: Portable Archive
 
-1. Establish the engineering charter and reference-evaluation workflow.
-2. Maintain a source/provenance register for candidate capabilities.
-3. Build one small, dependency-free capability with tests and explicit contracts.
-4. Prove it through failure-oriented tests before using it in an application.
-5. Expand only when a real workflow demonstrates that the capability is reusable.
+A dependency-free JavaScript package for a versioned JSON export/import envelope. It provides canonical SHA-256 integrity checks, bounded input, strict envelope validation, explicit errors, optional schema migrations, and an application validation hook. It does **not** implement persistence, encryption, authentication, or application-specific validation.
 
-## Repository layout
+A checksum is not a digital signature and cannot prove who created an archive. Applications must treat imported content as untrusted and validate it before changing persistent data.
 
-- `docs/` — strategy, engineering standards, architecture decisions, candidate evaluations.
-- `packages/` — small reusable capabilities with independent contracts and tests.
-- `apps/` — focused applications built from proven capabilities.
-- `tests/` — cross-package and end-to-end tests as the project grows.
+## Development
 
-## Reference
+Requires Node.js `>=22.12`.
 
-- Reference fork: https://github.com/Loofy147/everything
-- Working repository: https://github.com/Loofy147/From-everything-to-apps
+```sh
+npm ci
+npm test
+```
 
-## Status
+Run package tests alone with `npm run test:portable-archive`. No runtime npm dependencies are currently required.
 
-The repository is in foundation stage. No application or capability should be described as production-ready until its documented acceptance checks and release gates have passed.
+## Layout
+
+- `docs/` — standards, extraction protocol, provenance register, and architecture decisions.
+- `packages/` — small reusable capabilities with explicit contracts and tests.
+- `apps/` — focused applications, added only when validated workflows justify them.
+- `.github/workflows/ci.yml` — tests on pushes and pull requests.
+
+## Source provenance
+
+The source register pins the reviewed `Loofy147/everything` snapshot at commit `06802a1e3749202e4db94d39c9ef5ab1a97d0ef1`. Static review does not prove every upstream app builds or is production-ready. No upstream application source has been copied into Portable Archive; its requirements were informed by backup/import use cases in upstream documentation and our durability standards.
+
+## Licensing
+
+Original project code is MIT-licensed. Third-party code, dependencies, fonts, models, and assets retain their own terms; the root license does not override them. Update the source register and preserve required notices before reusing upstream code or assets.
+
+## Status vocabulary
+
+`research` → `prototype` → `candidate` → `verified-module` → `pilot` → `production`.
+
+Unit tests alone do not make an application production-ready. Each status change requires the relevant gates in `docs/engineering-standards.md`.
