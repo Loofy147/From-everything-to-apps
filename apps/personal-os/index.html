@@ -57,12 +57,15 @@
       <header class="topbar">
         <div class="breadcrumbs"><span>Workspace</span><span aria-hidden="true">/</span><strong id="page-crumb">Overview</strong></div>
         <div class="topbar-actions">
-          <label class="searchbox">
-            <span aria-hidden="true">⌕</span>
-            <span class="sr-only">Search apps and integrations</span>
-            <input id="global-search" type="search" placeholder="Search apps, tools, capabilities…" autocomplete="off">
-            <kbd>/</kbd>
-          </label>
+          <div class="search-wrap">
+            <label class="searchbox">
+              <span aria-hidden="true">⌕</span>
+              <span class="sr-only">Search apps, notes, tasks, research, documents, media and integrations</span>
+              <input id="global-search" type="search" placeholder="Search anything in your workspace…" autocomplete="off" aria-controls="global-search-results" aria-expanded="false" aria-autocomplete="list">
+              <kbd>/</kbd>
+            </label>
+            <div id="global-search-results" class="quick-search-results" role="listbox" aria-label="Workspace search results" hidden></div>
+          </div>
           <button id="theme-toggle" class="icon-button" type="button" aria-label="Switch to dark theme" title="Switch theme"><span aria-hidden="true">◐</span></button>
           <a class="avatar" href="#architecture" aria-label="Open personal OS system map">P</a>
         </div>
@@ -98,10 +101,42 @@
         </section>
 
         <section class="metric-grid" aria-label="Workspace summary">
-          <article class="metric-card"><div class="metric-icon icon-violet" aria-hidden="true">▦</div><div><span>Usable local apps</span><strong id="metric-apps">2</strong><small>Launchable now</small></div></article>
+          <article class="metric-card"><div class="metric-icon icon-violet" aria-hidden="true">▦</div><div><span>App destinations</span><strong id="metric-apps">8</strong><small>Inside one workspace</small></div></article>
           <article class="metric-card"><div class="metric-icon icon-lime" aria-hidden="true">⌘</div><div><span>Integration options</span><strong id="metric-integrations">0</strong><small>Catalogued, not all connected</small></div></article>
           <article class="metric-card"><div class="metric-icon icon-blue" aria-hidden="true">⬡</div><div><span>Shared capabilities</span><strong id="metric-modules">3</strong><small>First-party modules</small></div></article>
           <article class="metric-card"><div class="metric-icon icon-amber" aria-hidden="true">＋</div><div><span>Personal shortcuts</span><strong id="metric-shortcuts">0</strong><small>Saved in this browser</small></div></article>
+        </section>
+
+        <section class="personal-dashboard" aria-labelledby="dashboard-title">
+          <div class="dashboard-heading">
+            <div><p class="eyebrow">PERSONAL WORKSPACE</p><h2 id="dashboard-title">Your day, at a glance</h2><p>Live summaries from your own local apps. Start with the next action, then jump directly to the relevant work.</p></div>
+            <button class="button button-secondary" type="button" data-nav="board">Open Work Board <span aria-hidden="true">→</span></button>
+          </div>
+          <div class="dashboard-stats" aria-label="Personal workspace activity">
+            <article class="dashboard-stat"><span class="dashboard-stat-icon icon-violet" aria-hidden="true">↗</span><div><span>Open tasks</span><strong id="dashboard-open-tasks">0</strong><small>Next + in progress</small></div></article>
+            <article class="dashboard-stat"><span class="dashboard-stat-icon icon-blue" aria-hidden="true">◷</span><div><span>Due today / overdue</span><strong id="dashboard-due-tasks">0</strong><small>Needs attention</small></div></article>
+            <article class="dashboard-stat"><span class="dashboard-stat-icon icon-amber" aria-hidden="true">⌕</span><div><span>To review</span><strong id="dashboard-review-count">0</strong><small>Research items</small></div></article>
+            <article class="dashboard-stat"><span class="dashboard-stat-icon icon-lime" aria-hidden="true">▶</span><div><span>Active media</span><strong id="dashboard-media-active">0</strong><small>Production in progress</small></div></article>
+          </div>
+          <div class="dashboard-panels">
+            <section class="dashboard-panel" aria-labelledby="dashboard-next-heading">
+              <div class="dashboard-panel-heading"><div><p class="eyebrow">FOCUS</p><h3 id="dashboard-next-heading">Next actions</h3></div><button class="text-link" type="button" data-nav="board">All tasks →</button></div>
+              <div id="dashboard-next-list" class="dashboard-list"><p class="dashboard-empty">Your next actions will appear here.</p></div>
+            </section>
+            <section class="dashboard-panel" aria-labelledby="dashboard-notes-heading">
+              <div class="dashboard-panel-heading"><div><p class="eyebrow">KNOWLEDGE</p><h3 id="dashboard-notes-heading">Recently updated notes</h3></div><button class="text-link" type="button" data-nav="notes">All notes →</button></div>
+              <div id="dashboard-notes-list" class="dashboard-list"><p class="dashboard-empty">Save a note to see it here.</p></div>
+            </section>
+            <section class="dashboard-panel" aria-labelledby="dashboard-research-heading">
+              <div class="dashboard-panel-heading"><div><p class="eyebrow">EVIDENCE</p><h3 id="dashboard-research-heading">Research queue</h3></div><button class="text-link" type="button" data-nav="research">Library →</button></div>
+              <div id="dashboard-research-list" class="dashboard-list"><p class="dashboard-empty">Research awaiting review will appear here.</p></div>
+            </section>
+            <section class="dashboard-panel" aria-labelledby="dashboard-media-heading">
+              <div class="dashboard-panel-heading"><div><p class="eyebrow">CREATION</p><h3 id="dashboard-media-heading">Production queue</h3></div><button class="text-link" type="button" data-nav="media">Media Workbench →</button></div>
+              <div id="dashboard-media-list" class="dashboard-list"><p class="dashboard-empty">Your creative projects will appear here.</p></div>
+            </section>
+          </div>
+          <p id="dashboard-storage-notice" class="dashboard-storage-notice" hidden>Some saved data could not be validated. Editing is blocked; recover from Backup & Data before continuing.</p>
         </section>
 
         <div class="section-heading">
