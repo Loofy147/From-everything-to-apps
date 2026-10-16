@@ -1,0 +1,15 @@
+{
+  "name": "@from-everything-to-apps/record-vault",
+  "version": "0.1.0",
+  "description": "A vendor-independent local record store with portable archive import and export.",
+  "type": "module",
+  "license": "MIT",
+  "engines": { "node": ">=22.12" },
+  "exports": "./src/index.js",
+  "dependencies": {
+    "@from-everything-to-apps/portable-archive": "0.1.0"
+  },
+  "scripts": {
+    "test": "node --test"
+  }
+}
