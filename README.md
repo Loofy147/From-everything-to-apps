@@ -50,7 +50,7 @@ From the repository root, start a static server with `python3 -m http.server 417
 
 ## Layout
 
-- `docs/` — standards, extraction protocol, provenance register, and architecture decisions.
+- `docs/` — standards, extraction protocol, provenance register, architecture decisions, and validation plans.
 - `packages/` — small reusable capabilities with explicit contracts and tests.
 - `apps/` — focused applications, added only when validated workflows justify them.
 - `.github/workflows/ci.yml` — tests on pushes and pull requests.
