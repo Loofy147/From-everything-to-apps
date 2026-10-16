@@ -22,7 +22,7 @@ Do not open `index.html` directly from `file://`; ES modules, import maps, and W
 - [x] Chromium CI: Khidma Desk customer/job/payment workflow, export/clear/restore, tampered archive rejection, Arabic RTL at 390px.
 - [x] Unit tests: malformed JSON, wrong application, unsupported format/schema, size limits, domain validation and v1-to-v2 Record Vault migration.
 - [ ] Manually test in at least two browsers.
-- [x] Khidma Desk Chromium CI: download a backup outside the origin, clear all origin storage, reload, import the backup, and compare the complete serialized state.
+- [x] Khidma Desk Chromium CI: download a backup outside the origin, clear all application localStorage, reload, import the backup, and compare the complete serialized state.
 - [ ] Repeat origin-data-loss recovery manually for Archive Lab / Record Vault using disposable data.
 - [ ] Perform keyboard and screen-reader checks, especially for dialogs and Arabic RTL mixed-direction values.
 
