@@ -205,7 +205,7 @@ function writeState(candidate, { recovery = false, successMessage = 'Personal OS
 }
 
 function updateSafetyUI() {
-  for (const id of ['note-form', 'project-form', 'task-form', 'research-form']) {
+  for (const id of ['note-form', 'project-form', 'task-form', 'research-form', 'document-form', 'media-form']) {
     const form = $('#' + id);
     if (form) $$('button[type="submit"]', form).forEach((button) => { button.disabled = !storageHealthy; });
   }
@@ -682,6 +682,23 @@ function handleCollectionAction(event) {
         if (writeState({ ...state, research: state.research.filter((record) => record.id !== id) }, { successMessage: 'Research item deleted.' }) && wasEditing) resetResearchForm();
       }
     }
+    if (action === 'document-edit') editDocument(id);
+    if (action === 'document-download') downloadDocument(id);
+    if (action === 'document-delete') {
+      const item = getDocument(id);
+      if (item && window.confirm('Delete document "' + item.title + '"?')) {
+        const wasEditing = $('#document-id').value === id;
+        if (writeState({ ...state, documents: state.documents.filter((record) => record.id !== id) }, { successMessage: 'Document deleted.' }) && wasEditing) resetDocumentForm();
+      }
+    }
+    if (action === 'media-edit') editMediaProject(id);
+    if (action === 'media-delete') {
+      const item = getMediaProject(id);
+      if (item && window.confirm('Delete media project "' + item.title + '"?')) {
+        const wasEditing = $('#media-id').value === id;
+        if (writeState({ ...state, media: state.media.filter((record) => record.id !== id) }, { successMessage: 'Media project deleted.' }) && wasEditing) resetMediaForm();
+      }
+    }
   }
   const statusSelect = event.target.closest('select[data-action="research-status"]');
   if (statusSelect) {
@@ -689,6 +706,13 @@ function handleCollectionAction(event) {
     if (!item || !RESEARCH_STATUSES.includes(statusSelect.value)) return;
     writeState({ ...state, research: state.research.map((record) => record.id === item.id ? { ...record, status: statusSelect.value, updatedAt: new Date().toISOString() } : record) },
       { successMessage: 'Research review state updated.' });
+  }
+  const mediaSelect = event.target.closest('select[data-action="media-stage"]');
+  if (mediaSelect) {
+    const item = getMediaProject(mediaSelect.dataset.id);
+    if (!item || !MEDIA_STAGES.includes(mediaSelect.value)) return;
+    writeState({ ...state, media: state.media.map((record) => record.id === item.id ? { ...record, stage: mediaSelect.value, updatedAt: new Date().toISOString() } : record) },
+      { successMessage: 'Media production stage updated.' });
   }
 }
 
@@ -960,6 +984,20 @@ export async function bootPersonalApps() {
   $('#research-state-filter').addEventListener('change', renderResearch);
   $('#research-list').addEventListener('click', handleCollectionAction);
   $('#research-list').addEventListener('change', handleCollectionAction);
+
+  $('#document-form').addEventListener('submit', submitDocument);
+  $('#document-reset').addEventListener('click', resetDocumentForm);
+  $('#document-cancel-edit').addEventListener('click', resetDocumentForm);
+  $('#documents-search').addEventListener('input', renderDocuments);
+  $('#documents-list').addEventListener('click', handleCollectionAction);
+  $('#document-import').addEventListener('change', (event) => { void loadTextFile(event.currentTarget.files?.[0]); });
+
+  $('#media-form').addEventListener('submit', submitMediaProject);
+  $('#media-reset').addEventListener('click', resetMediaForm);
+  $('#media-cancel-edit').addEventListener('click', resetMediaForm);
+  $('#media-search').addEventListener('input', renderMedia);
+  $('#media-list').addEventListener('click', handleCollectionAction);
+  $('#media-list').addEventListener('change', handleCollectionAction);
 
   $('#export-suite-backup').addEventListener('click', exportBackup);
   $('#import-suite-backup').addEventListener('change', (event) => { void importBackup(event.currentTarget.files?.[0]); });
