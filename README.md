@@ -15,6 +15,7 @@ The reference repository is research material—not an architecture we must pres
 | Khidma Core | Candidate | 12 domain tests cover customers, job references, status transitions, DZD limits and manual payment totals. |
 | Archive Lab | Prototype | Chromium acceptance passes create/edit/reload/export/clear/restore/tamper rejection; used to verify portable data boundaries. |
 | Khidma Desk | Prototype | Chromium covers invalid archive classes, storage-write failure, concurrent import conflict, and external-backup recovery after clearing application localStorage. User research, accessibility and cross-browser checks remain open. |
+| Personal OS shell | Prototype | App launcher, search, integration catalog, system map and local custom shortcuts. Direct API connections, identity, cloud sync and accessibility review remain open. |
 
 ## Engineering principles
 
@@ -46,13 +47,14 @@ Run focused checks with `npm run test:portable-archive` or `npm run test:khidma-
 
 ## Try the consumer harness
 
-From the repository root, start a static server with `python3 -m http.server 4173` and open `http://localhost:4173/apps/archive-lab/` or `http://localhost:4173/apps/khidma-desk/`. See the application READMEs for limits. Both are local-only prototypes using unencrypted browser `localStorage`; they are not production-ready. Automated Chromium checks pass, including restoration of Khidma Desk from a downloaded backup after clearing all application localStorage. Manual cross-browser validation, broader accessibility checks and recovery testing for Record Vault remain open.
+From the repository root, start a static server with `python3 -m http.server 4173` and open `http://localhost:4173/` for the Personal OS launchpad, or open `/apps/archive-lab/` and `/apps/khidma-desk/` directly. The shell supports app navigation, connector discovery, and local-only custom shortcuts. It does not yet authenticate or call external service APIs from the browser; service links open external sites. All included apps remain prototypes using unencrypted browser `localStorage` unless their README states otherwise. Automated Chromium acceptance does not establish production readiness; manual cross-browser, accessibility and user testing remain open.
 
 ## Layout
 
 - `docs/` — standards, extraction protocol, provenance register, architecture decisions, and validation plans.
 - `packages/` — small reusable capabilities with explicit contracts and tests.
 - `apps/` — focused applications, added only when validated workflows justify them.
+- `apps/personal-os/` — shell, static registry and custom shortcut launcher; architecture and integration shortlist are in `docs/architecture/` and `docs/integrations/`.
 - `.github/workflows/ci.yml` — tests on pushes and pull requests.
 
 ## Source provenance
