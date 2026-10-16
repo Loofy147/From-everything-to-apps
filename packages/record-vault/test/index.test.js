@@ -177,3 +177,58 @@ test('rejects duplicate ids, invalid updates and missing record ids', () => {
   assert.throws(() => vault.updateRecord('fixed', { id: 'new-id' }), (error) => error.code === 'invalid-input');
   assert.throws(() => vault.updateRecord('missing', { title: 'Nope' }), (error) => error.code === 'not-found');
 });
+
+test('storage failure during archive restore does not advance memory or stored state', async () => {
+  const { vault, storage } = makeVault();
+  vault.createRecord({ title: 'Keep current state' });
+  const beforeRecords = vault.listRecords();
+  const beforeStorage = storage.getItem('from-everything-to-apps.record-vault');
+  const source = makeVault().vault;
+  source.createRecord({ title: 'Replacement' });
+  const archive = await source.exportArchive();
+
+  storage.failNextWrite = true;
+  await assert.rejects(vault.importArchive(archive), (error) => error.code === 'storage-write-failed');
+  assert.deepEqual(vault.listRecords(), beforeRecords);
+  assert.equal(storage.getItem('from-everything-to-apps.record-vault'), beforeStorage);
+});
+
+test('does not overwrite edits made while archive validation is pending', async () => {
+  const { vault } = makeVault();
+  vault.createRecord({ title: 'Before import starts' });
+  const source = makeVault().vault;
+  source.createRecord({ title: 'Incoming replacement' });
+  const archive = await source.exportArchive();
+
+  const importPromise = vault.importArchive(archive);
+  vault.createRecord({ title: 'Concurrent local edit' });
+  await assert.rejects(importPromise, (error) => error.code === 'concurrent-modification');
+  assert.deepEqual(vault.listRecords().map((record) => record.title), [
+    'Before import starts',
+    'Concurrent local edit',
+  ]);
+});
+
+test('does not overwrite storage modified by another context before import commits', async () => {
+  const { vault, storage } = makeVault();
+  vault.createRecord({ title: 'Local record' });
+  const source = makeVault().vault;
+  source.createRecord({ title: 'Incoming record' });
+  const archive = await source.exportArchive();
+
+  const externalState = JSON.stringify({
+    schemaVersion: 2,
+    records: [{
+      id: 'external-1',
+      title: 'External tab record',
+      notes: '',
+      status: 'open',
+      createdAt: '2026-10-16T10:00:00.000Z',
+      updatedAt: '2026-10-16T10:00:00.000Z',
+    }],
+  });
+  const importPromise = vault.importArchive(archive);
+  storage.setItem('from-everything-to-apps.record-vault', externalState);
+  await assert.rejects(importPromise, (error) => error.code === 'concurrent-modification');
+  assert.equal(storage.getItem('from-everything-to-apps.record-vault'), externalState);
+});
