@@ -151,9 +151,9 @@ try {
   const personalOsRoot = new URL('/', web.url).toString();
   await cdp.send('Page.navigate', { url: personalOsRoot }, session);
   await waitFor("location.pathname === '/apps/personal-os/' && document.querySelector('#overview-title')?.textContent.includes('One home')", 'Personal OS root redirect and boot');
-  await waitFor("document.querySelectorAll('#overview-app-grid .app-card').length === 2", 'Personal OS app registry');
+  await waitFor("document.querySelectorAll('#overview-app-grid .app-card').length === 3", 'Personal OS app registry');
   const shellMetrics = await evaluate("({title:document.title,apps:document.querySelectorAll('#overview-app-grid .app-card').length,modules:document.querySelectorAll('#overview-module-grid .module-card').length,integrations:Number(document.querySelector('#metric-integrations')?.textContent),width:innerWidth,scrollWidth:document.documentElement.scrollWidth})");
-  assert.equal(shellMetrics.apps, 2);
+  assert.equal(shellMetrics.apps, 3);
   assert.equal(shellMetrics.modules, 3);
   assert.ok(shellMetrics.integrations >= 15, 'Expected a useful integration and license catalog.');
   assert.ok(shellMetrics.scrollWidth <= shellMetrics.width, 'Personal OS desktop layout has horizontal overflow.');
@@ -167,7 +167,7 @@ try {
   await evaluate("(() => { const search=document.querySelector('#global-search'); search.value='supabase'; search.dispatchEvent(new Event('input',{bubbles:true})); return true; })()");
   await waitFor("document.querySelectorAll('#integrations-grid .integration-card').length === 1 && document.querySelector('#integrations-grid .integration-card h3')?.textContent === 'Supabase'", 'Personal OS integration search');
   await evaluate("(() => { const search=document.querySelector('#global-search'); search.value=''; search.dispatchEvent(new Event('input',{bubbles:true})); document.querySelector('[data-nav=apps]').click(); return true; })()");
-  await waitFor("!document.querySelector('#view-apps')?.hidden && document.querySelectorAll('#apps-grid > a.app-card').length === 2", 'Personal OS apps view');
+  await waitFor("!document.querySelector('#view-apps')?.hidden && document.querySelectorAll('#apps-grid > a.app-card').length === 6", 'Personal OS apps view');
   console.log('PASS integration filters/search distinguish workspace tools from app-side connections');
 
   await evaluate("document.querySelector('#add-shortcut').click(); true");
