@@ -13,7 +13,7 @@
   "scripts": {
     "test": "node --test packages/*/test/*.test.js",
     "test:portable-archive": "node --test packages/portable-archive/test/*.test.js",
-    "check": "npm test && node --check packages/portable-archive/src/index.js && node --check packages/record-vault/src/index.js && node --check packages/khidma-core/src/index.js && node --check apps/archive-lab/main.js && node --check apps/archive-lab/tests/e2e.mjs && node --check apps/khidma-desk/main.js && node apps/archive-lab/tests/e2e.mjs",
+    "check": "npm test && node --check packages/portable-archive/src/index.js && node --check packages/record-vault/src/index.js && node --check packages/khidma-core/src/index.js && node --check apps/archive-lab/main.js && node --check apps/khidma-desk/main.js && node --check tests/browser/e2e.mjs && node tests/browser/e2e.mjs",
     "test:khidma-core": "node --test packages/khidma-core/test/*.test.js"
   }
 }
