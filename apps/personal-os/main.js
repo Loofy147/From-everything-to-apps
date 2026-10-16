@@ -584,6 +584,22 @@ function removeShortcut(id) {
 function bindEvents() {
   $$('[data-nav]').forEach((button) => button.addEventListener('click', () => activateView(button.dataset.nav)));
   $('#global-search').addEventListener('input', (event) => { applySearch(event.currentTarget.value); renderQuickSearch(); });
+  $('#global-search-results').addEventListener('keydown', (event) => {
+    const options = $('.quick-search-result', $('#global-search-results'));
+    const index = options.indexOf(document.activeElement);
+    if (event.key === 'ArrowDown' && options.length) {
+      event.preventDefault();
+      options[Math.min(index + 1, options.length - 1)].focus();
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      if (index <= 0) $('#global-search').focus();
+      else options[index - 1].focus();
+    } else if (event.key === 'Escape') {
+      $('#global-search-results').hidden = true;
+      $('#global-search').setAttribute('aria-expanded', 'false');
+      $('#global-search').focus();
+    }
+  });
   $('#global-search').addEventListener('keydown', (event) => {
     if (event.key === 'ArrowDown' && !$('#global-search-results').hidden) {
       const first = $('#global-search-results .quick-search-result');
@@ -679,9 +695,9 @@ async function boot() {
     await loadRegistry();
     await bootPersonalApps();
     renderAll();
-    renderQuickSearch();
     const requestedView = window.location.hash.slice(1) || 'overview';
     activateView(requestedView, false);
+    renderQuickSearch();
     if (!shortcutStorageHealthy) $('#add-shortcut').disabled = true;
   } catch (error) {
     registryError = error.message || 'Unknown registry error';
