@@ -157,7 +157,9 @@ try {
   assert.equal(shellMetrics.modules, 3);
   assert.ok(shellMetrics.integrations >= 15, 'Expected a useful integration and license catalog.');
   assert.ok(shellMetrics.scrollWidth <= shellMetrics.width, 'Personal OS desktop layout has horizontal overflow.');
-  console.log('PASS Personal OS root entry, app registry, capability modules and integration catalog render');
+  assert.equal(await evaluate("document.querySelector('#dashboard-open-tasks')?.textContent"), '0');
+  assert.ok(await evaluate("document.querySelector('#dashboard-title')?.textContent.includes('Your day')"), 'Personal OS overview should open on the live workspace dashboard.');
+  console.log('PASS Personal OS root entry, live dashboard, app registry, capability modules and integration catalog render');
 
   await evaluate("document.querySelector('[data-nav=integrations]').click(); true");
   await waitFor("!document.querySelector('#view-integrations')?.hidden && document.querySelectorAll('#integrations-grid .integration-card').length >= 15", 'Personal OS integrations view');
@@ -200,6 +202,16 @@ try {
   await waitFor("JSON.parse(localStorage.getItem('personal-os.suite-data.v1') || '{}').notes?.length === 1 && document.querySelector('#notes-list .note-card h3')?.textContent === 'E2E product principle'", 'Personal OS note create and persistence');
   await evaluate("document.querySelector('#notes-list button[data-action=note-pin]').click(); true");
   await waitFor("JSON.parse(localStorage.getItem('personal-os.suite-data.v1') || '{}').notes?.[0]?.pinned === true", 'Personal OS pin note');
+  await evaluate("document.querySelector('[data-nav=overview]').click(); true");
+  await evaluate("(() => { const input=document.querySelector('#global-search'); input.value='E2E product principle'; input.dispatchEvent(new Event('input',{bubbles:true})); return true; })()");
+  await waitFor("!document.querySelector('#global-search-results')?.hidden && [...document.querySelectorAll('#global-search-results .quick-search-result')].some(item => item.textContent.includes('E2E product principle'))", 'cross-app search finds a saved note');
+  await evaluate("document.querySelector('#global-search-results .quick-search-result').click(); true");
+  await waitFor("!document.querySelector('#view-notes')?.hidden && document.activeElement?.id === 'note-' + JSON.parse(localStorage.getItem('personal-os.suite-data.v1')).notes[0].id", 'search result navigates to and focuses the saved note');
+  await evaluate("document.querySelector('[data-nav=board]').click(); true");
+  await waitFor("!document.querySelector('#view-board')?.hidden", 'browser history navigation source view');
+  await evaluate("history.back(); true");
+  await waitFor("location.hash === '#notes' && !document.querySelector('#view-notes')?.hidden", 'browser back returns to previous app view');
+  console.log('PASS unified search opens the matching record and browser back restores the previous app view');
 
   await evaluate("document.querySelector('[data-nav=board]').click(); true");
   await waitFor("!document.querySelector('#view-board')?.hidden", 'Work Board view');
