@@ -57,5 +57,6 @@ A self-employed service provider or tiny repair/installation business needs to k
 - [x] Chromium CI rejects tampered, wrong-app, future-schema, oversized and domain-invalid imports without replacing the pre-existing stored state.
 - [x] Chromium CI: a storage-write failure does not advance the visible or persisted customer state; a detected concurrent change during asynchronous import is preserved and the stale import is rejected.
 - [x] Chromium e2e covers customer/job/payment, transitions, exact archive round-trip, invalid import classes, storage errors/conflicts, origin-storage wipe recovery, 390px French LTR and Arabic RTL layouts.
-- [x] A Chromium keyboard smoke test opens the estimate dialog with Enter, verifies input focus, closes with Escape and verifies focus returns to the opener.\n- [ ] Full keyboard and screen-reader audit across French LTR, Arabic RTL and mixed-direction values remains open.
+- [x] A Chromium keyboard smoke test opens the estimate dialog with Enter, verifies input focus, closes with Escape and verifies focus returns to the opener.
+- [ ] Full keyboard and screen-reader audit across French LTR, Arabic RTL and mixed-direction values remains open.
 - [ ] Manual testing with at least two browsers, local backup recovery and prospective-user workflow validation remain open before pilot.
