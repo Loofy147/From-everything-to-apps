@@ -156,7 +156,7 @@ try {
 
   const personalOsRoot = new URL('/', web.url).toString();
   await cdp.send('Page.navigate', { url: personalOsRoot }, session);
-  await waitFor("location.pathname === '/apps/personal-os/' && document.querySelector('#overview-title')?.textContent.includes('One home')", 'Personal OS root redirect and boot');
+  await waitFor("location.pathname === '/apps/personal-os/' && document.querySelector('#overview-title')?.textContent.includes('One control center')", 'Personal OS root redirect and boot');
   await waitFor("document.querySelectorAll('#overview-app-grid .app-card').length === 3", 'Personal OS app registry');
   const shellMetrics = await evaluate("({title:document.title,apps:document.querySelectorAll('#overview-app-grid .app-card').length,modules:document.querySelectorAll('#overview-module-grid .module-card').length,integrations:Number(document.querySelector('#metric-integrations')?.textContent),width:innerWidth,scrollWidth:document.documentElement.scrollWidth})");
   assert.equal(shellMetrics.apps, 3);
