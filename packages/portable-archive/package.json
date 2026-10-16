@@ -4,10 +4,11 @@
   "description": "A dependency-free, versioned JSON archive format with bounded imports and SHA-256 integrity checks.",
   "type": "module",
   "license": "MIT",
-  "engines": { "node": ">=22.12" },
+  "engines": {
+    "node": ">=22.12"
+  },
   "exports": "./src/index.js",
   "scripts": {
-    "test": "node --test",
-    "test:coverage": "node --test"
+    "test": "node --test"
   }
 }
