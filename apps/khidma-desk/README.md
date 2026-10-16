@@ -41,3 +41,7 @@ Do not open the file directly via `file://`. The browser needs the module/import
 - Full checks: `npm run check` (unit tests, syntax checks and Chromium browser acceptance suite)
 
 The browser suite runs on the GitHub Actions runner. Before a pilot, complete manual checks in at least two browsers, verify export files and restore from an external backup, and test the workflow with prospective service providers. This is a product hypothesis, not evidence of demand or production readiness.
+
+## Manual validation before pilot
+
+Use the [Khidma Desk v0.1 manual validation and pilot checklist](../../docs/validation/khidma-desk-v0.1-pilot-plan.md) before testing with real service providers. It covers synthetic-data sessions, cross-browser backup recovery, French/Arabic RTL accessibility checks, anonymous notes, and decision gates. Do not use this prototype with live customer or payment data.
