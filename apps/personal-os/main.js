@@ -376,7 +376,8 @@ function navigateQuickResult(result) {
   activateView(result.view || 'overview');
   input.value = result.kind === 'integration' ? result.queryKey : '';
   applySearch(input.value);
-  renderQuickSearch();
+  host.hidden = true;
+  input.setAttribute('aria-expanded', 'false');
   input.focus();
 }
 
@@ -582,7 +583,13 @@ function removeShortcut(id) {
 }
 
 function bindEvents() {
-  $$('[data-nav]').forEach((button) => button.addEventListener('click', () => activateView(button.dataset.nav)));
+  $('[data-nav]').forEach((button) => button.addEventListener('click', () => activateView(button.dataset.nav)));
+  const quickCreateFocus = { notes: '#note-title', board: '#task-title', research: '#research-title-input', media: '#media-project-title' };
+  $('[data-quick-create]').forEach((button) => button.addEventListener('click', () => {
+    const view = button.dataset.quickCreate;
+    activateView(view);
+    requestAnimationFrame(() => $(quickCreateFocus[view])?.focus());
+  }));
   $('#global-search').addEventListener('input', (event) => { applySearch(event.currentTarget.value); renderQuickSearch(); });
   $('#global-search-results').addEventListener('keydown', (event) => {
     const options = $('.quick-search-result', $('#global-search-results'));
