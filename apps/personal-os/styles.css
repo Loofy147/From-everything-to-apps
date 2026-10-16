@@ -538,3 +538,31 @@ button:disabled { cursor: not-allowed; opacity: .5; }
 @media (max-width: 390px) {
   .dashboard-quick-actions { grid-template-columns: minmax(0,1fr); }
 }
+
+
+/* Unified operations control center: linked signals and credential hygiene. */
+.operations-shortcuts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 0 0 18px; }
+.operations-shortcut { min-width: 0; display: flex; align-items: center; gap: 11px; padding: 13px 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--ink); text-align: left; box-shadow: 0 2px 7px rgba(22,30,61,.015); }
+.operations-shortcut:hover { border-color: var(--primary); }
+.operations-shortcut-icon { display: grid; flex: 0 0 auto; place-items: center; width: 34px; height: 34px; border-radius: 10px; background: var(--primary-soft); color: var(--primary); font-size: 17px; }
+.operations-shortcut > span:nth-child(2) { display: grid; min-width: 0; gap: 1px; }
+.operations-shortcut strong { font-size: 17px; line-height: 1.1; }
+.operations-shortcut small { color: var(--muted); font-size: 10px; overflow-wrap: anywhere; }
+.operations-shortcut-arrow { margin-left: auto; color: var(--quiet); }
+.operations-layout { margin-top: 14px; }
+.vault-banner { margin-bottom: 16px; }
+.vault-card .collection-body { margin: 9px 0; }
+.vault-card .vault-controls { display: flex; flex-wrap: wrap; justify-content: flex-end; margin-top: 11px; }
+.vault-card .vault-safety-copy { margin: 10px 0 0; color: var(--muted); font-size: 10px; border-top: 1px solid var(--border); padding-top: 9px; }
+.observation-card .collection-body { margin: 10px 0; }
+.observation-severity-critical, .observation-severity-high { background: var(--amber-soft); color: var(--amber); }
+.observation-severity-medium { background: var(--blue-soft); color: var(--muted); }
+.observation-severity-low, .observation-severity-info { background: var(--green-soft); color: var(--green); }
+.operation-related-actions { justify-content: flex-start; margin-top: 9px; }
+@media (max-width: 1100px) {
+  .operations-shortcuts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 760px) {
+  .operations-shortcuts { grid-template-columns: minmax(0, 1fr); }
+  .operations-shortcut { padding: 11px; }
+}
