@@ -557,7 +557,7 @@ function renderData() {
   $('#data-document-count').textContent = String(state.documents.length);
   $('#data-media-count').textContent = String(state.media.length);
   $('#backup-file-status').textContent = storageHealthy
-    ? 'Current records are local to this browser. The archive includes notes, projects, tasks and research.'
+    ? 'Current records are local to this browser. The archive includes notes, projects, tasks, research, documents and media projects.'
     : 'Data validation failed. Restore a valid Personal OS backup or clear app data to recover.';
   $('#export-suite-backup').disabled = !storageHealthy;
 }
