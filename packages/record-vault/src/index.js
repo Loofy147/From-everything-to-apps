@@ -42,6 +42,21 @@ function assertExactKeys(value, keys, label) {
   }
 }
 
+function readAllowedFields(value, allowed, label) {
+  if (!isPlainObject(value)) fail('invalid-input', `${label} must be a plain object.`);
+  const result = {};
+  for (const key of Reflect.ownKeys(value)) {
+    if (typeof key !== 'string') fail('invalid-input', `${label} cannot contain symbol keys.`);
+    if (!allowed.has(key)) fail('invalid-input', `Unsupported ${label} field: ${key}.`);
+    const descriptor = Object.getOwnPropertyDescriptor(value, key);
+    if (!descriptor?.enumerable || !('value' in descriptor)) {
+      fail('invalid-input', `${label} fields must be enumerable data properties.`);
+    }
+    result[key] = descriptor.value;
+  }
+  return result;
+}
+
 function assertUtcTimestamp(value, label) {
   if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(value)) {
     fail('invalid-data', `${label} must be a UTC ISO timestamp.`);
@@ -226,13 +241,14 @@ export class RecordVault {
     return record ? cloneRecord(record) : null;
   }
 
-  createRecord({ id, title, notes = '', status = 'open' } = {}) {
+  createRecord(input = {}) {
+    const values = readAllowedFields(input, new Set(['id', 'title', 'notes', 'status']), 'record input');
     const now = this.#clock().toISOString();
     const record = normalizeRecord({
-      id: id ?? this.#idFactory(),
-      title,
-      notes,
-      status,
+      id: values.id ?? this.#idFactory(),
+      title: values.title,
+      notes: values.notes ?? '',
+      status: values.status ?? 'open',
       createdAt: now,
       updatedAt: now,
     });
@@ -244,17 +260,15 @@ export class RecordVault {
   }
 
   updateRecord(id, patch = {}) {
-    if (!isPlainObject(patch)) fail('invalid-input', 'Record updates must be a plain object.');
-    const allowed = new Set(['title', 'notes', 'status']);
-    for (const key of Object.keys(patch)) {
-      if (!allowed.has(key)) fail('invalid-input', `Field cannot be updated: ${key}.`);
-    }
+    const values = readAllowedFields(patch, new Set(['title', 'notes', 'status']), 'record update');
     const existing = this.#state.records.find((item) => item.id === id);
     if (!existing) fail('not-found', `Record not found: ${id}.`);
     const updated = normalizeRecord({
       ...existing,
-      ...patch,
-      updatedAt: this.#clock().toISOString(),
+      ...values,
+      updatedAt: this.#clock().toISOString() < existing.updatedAt
+        ? existing.updatedAt
+        : this.#clock().toISOString(),
     });
     this.#commit(this.#state.records.map((item) => item.id === id ? updated : item));
     return cloneRecord(updated);
