@@ -47,14 +47,14 @@ A self-employed service provider or tiny repair/installation business needs to k
 ## Acceptance criteria
 
 - [ ] Customer and job forms reject invalid data with accessible errors.
-- [ ] A job must reference an existing customer.
-- [ ] Status changes follow the transition matrix; terminal jobs cannot be reopened.
-- [ ] Estimated and paid amounts use non-negative whole-DZD integers; payment total cannot exceed the estimate.
+- [x] A job must reference an existing customer (domain tests).
+- [x] Status changes follow the transition matrix; terminal jobs cannot be reopened (domain tests).
+- [x] Estimated and paid amounts use non-negative whole-DZD integers; payment total cannot exceed the estimate (domain tests).
 - [ ] Creating/updating a customer or job persists only after localStorage confirms the write.
-- [ ] Page reload restores records without loss or duplication.
-- [ ] Valid archive restore round-trips all fields and payments.
+- [x] Page reload restores a customer, job and payment record in Chromium; broader dataset recovery remains unverified.
+- [x] Valid archive restore round-trips the complete serialized customer/job/payment state in Chromium.
 - [ ] Corrupt, wrong-app, future-schema, oversize and domain-invalid imports are rejected without replacing stored data.
 - [ ] A storage write error and detected concurrent import change do not advance memory.
-- [ ] Browser e2e covers the happy path, export/restore, invalid archive, and mobile layout.
+- [x] Chromium e2e covers customer/job/payment, transitions, export/restore, tampered archive rejection and mobile layout in both French LTR and Arabic RTL.
 - [ ] Arabic RTL and French LTR views are keyboard accessible and usable at 390px.
 - [ ] Manual testing with at least two browsers, local backup recovery and prospective-user workflow validation remain open before pilot.
