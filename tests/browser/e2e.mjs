@@ -269,6 +269,37 @@ try {
   await waitFor("JSON.parse(localStorage.getItem('personal-os.suite-data.v1') || '{}').media?.[0]?.stage === 'script'", 'Media Workbench production stage update');
   console.log('PASS Media Workbench stores creative briefs, output links and production stages');
 
+  await evaluate("document.querySelector('[data-nav=observations]').click(); true");
+  await waitFor("!document.querySelector('#view-observations')?.hidden", 'Observations view');
+  await evaluate("(() => { const task=JSON.parse(localStorage.getItem('personal-os.suite-data.v1')).tasks[0]; document.querySelector('#observation-title').value='E2E integration permission gap'; document.querySelector('#observation-kind').value='risk'; document.querySelector('#observation-severity').value='high'; document.querySelector('#observation-status').value='open'; document.querySelector('#observation-related-task').value=task.id; document.querySelector('#observation-source-url').value='https://example.com/security-review'; document.querySelector('#observation-tags').value='integration, security'; document.querySelector('#observation-details').value='The deployment adapter has not been connected to a protected secret store. Keep the task linked until a backend boundary is verified.'; document.querySelector('#observation-form').requestSubmit(); return true; })()");
+  await waitFor("JSON.parse(localStorage.getItem('personal-os.suite-data.v1') || '{}').observations?.length === 1 && document.querySelector('#observations-list').textContent.includes('E2E integration permission gap')", 'observation create, link and persistence');
+  assert.equal(await evaluate("JSON.parse(localStorage.getItem('personal-os.suite-data.v1')).observations[0].relatedTaskId"), await evaluate("JSON.parse(localStorage.getItem('personal-os.suite-data.v1')).tasks[0].id"), 'Observation should link to the related task.');
+
+  await evaluate("document.querySelector('[data-nav=vault]').click(); true");
+  await waitFor("!document.querySelector('#view-vault')?.hidden", 'credential inventory view');
+  await evaluate("(() => { const task=JSON.parse(localStorage.getItem('personal-os.suite-data.v1')).tasks[0]; document.querySelector('#vault-label').value='E2E GitHub release automation'; document.querySelector('#vault-provider').value='GitHub'; document.querySelector('#vault-secret-name').value='GITHUB_RELEASE_TOKEN'; document.querySelector('#vault-purpose').value='Publish validated releases from trusted CI only.'; document.querySelector('#vault-storage-location').value='github-actions'; document.querySelector('#vault-scopes').value='contents:read, releases:write'; document.querySelector('#vault-rotation-date').value='2099-12-31'; document.querySelector('#vault-status').value='planned'; document.querySelector('#vault-related-task').value=task.id; document.querySelector('#vault-form').requestSubmit(); return true; })()");
+  await waitFor("JSON.parse(localStorage.getItem('personal-os.suite-data.v1') || '{}').vaultEntries?.length === 1 && document.querySelector('#vault-list').textContent.includes('GITHUB_RELEASE_TOKEN')", 'credential reference metadata create and persistence');
+  const vaultStateBeforeUnsafe = await evaluate("localStorage.getItem('personal-os.suite-data.v1')");
+  assert.equal(await evaluate("JSON.parse(localStorage.getItem('personal-os.suite-data.v1')).vaultEntries[0].relatedTaskId"), await evaluate("JSON.parse(localStorage.getItem('personal-os.suite-data.v1')).tasks[0].id"), 'Credential metadata should link to the related task.');
+  assert.equal(await evaluate("Object.keys(JSON.parse(localStorage.getItem('personal-os.suite-data.v1')).vaultEntries[0]).some(key => ['value','token','secretValue'].includes(key))"), false, 'Credential inventory must not define a secret-value field.');
+  await evaluate("(() => { document.querySelector('#vault-label').value='Unsafe value test'; document.querySelector('#vault-provider').value='GitHub'; document.querySelector('#vault-secret-name').value='token-value'; document.querySelector('#vault-form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})); return true; })()");
+  await waitFor("document.querySelector('#global-status')?.dataset.kind === 'error' && document.querySelector('#global-status')?.textContent.includes('uppercase environment-style name')", 'credential reference strict validation');
+  assert.equal(await evaluate("localStorage.getItem('personal-os.suite-data.v1')"), vaultStateBeforeUnsafe, 'Invalid credential metadata must not modify stored state.');
+  await evaluate("document.querySelector('#vault-list select[data-action=vault-status]').value='rotation-due'; document.querySelector('#vault-list select[data-action=vault-status]').dispatchEvent(new Event('change',{bubbles:true})); true");
+  await waitFor("JSON.parse(localStorage.getItem('personal-os.suite-data.v1')).vaultEntries[0].status === 'rotation-due' && document.querySelector('#dashboard-rotation-due')?.textContent === '1'", 'credential rotation status and dashboard count');
+
+  await evaluate("document.querySelector('[data-nav=overview]').click(); true");
+  await evaluate("(() => { const input=document.querySelector('#global-search'); input.value='GITHUB_RELEASE_TOKEN'; input.dispatchEvent(new Event('input',{bubbles:true})); return true; })()");
+  await waitFor("!document.querySelector('#global-search-results')?.hidden && [...document.querySelectorAll('#global-search-results .quick-search-result')].some(item => item.textContent.includes('E2E GitHub release automation'))", 'global search finds credential reference');
+  await evaluate("document.querySelector('#global-search-results .quick-search-result').click(); true");
+  await waitFor("!document.querySelector('#view-vault')?.hidden && document.activeElement?.id === 'vault-entry-' + JSON.parse(localStorage.getItem('personal-os.suite-data.v1')).vaultEntries[0].id", 'credential search navigates and focuses the reference');
+  await evaluate("document.querySelector('#vault-list button[data-action=vault-open-task]').click(); true");
+  await waitFor("!document.querySelector('#view-board')?.hidden && document.activeElement?.id === 'task-' + JSON.parse(localStorage.getItem('personal-os.suite-data.v1')).tasks[0].id", 'credential reference opens linked task');
+  await evaluate("document.querySelector('#done-tasks button[data-action=task-delete]').click(); true");
+  await waitFor("document.querySelector('#global-status')?.dataset.kind === 'error' && document.querySelector('#global-status')?.textContent.includes('linked to an observation or credential')", 'linked task deletion guard');
+  assert.equal(await evaluate("JSON.parse(localStorage.getItem('personal-os.suite-data.v1')).tasks.length"), 1, 'A linked task must not be deleted while credential/observation references exist.');
+  console.log('PASS observations, credential inventory, task links, search, rotation tracking and secret-value boundary');
+
   async function uploadPersonalOsBackup(text, filename) {
     const expression = "(async () => { const input=document.querySelector('#import-suite-backup'); const dt=new DataTransfer(); dt.items.add(new File([" + JSON.stringify(text) + "], " + JSON.stringify(filename) + ", {type:'application/json'})); input.files=dt.files; input.dispatchEvent(new Event('change',{bubbles:true})); return true; })()";
     await evaluate(expression);
@@ -290,7 +321,10 @@ try {
   assert.equal(personalOsArchive.data.research.length, 1);
   assert.equal(personalOsArchive.data.documents.length, 1);
   assert.equal(personalOsArchive.data.media.length, 1);
-  console.log('PASS Personal OS data export produces a versioned SHA-256 archive of all six internal-app data collections');
+  assert.equal(personalOsArchive.data.observations.length, 1);
+  assert.equal(personalOsArchive.data.vaultEntries.length, 1);
+  assert.equal(JSON.stringify(personalOsArchive.data.vaultEntries).includes('token-value'), false);
+  console.log('PASS Personal OS data export includes eight collections with credential metadata only');
 
   const beforeTamperedImport = await evaluate("localStorage.getItem('personal-os.suite-data.v1')");
   const tamperedArchive = JSON.parse(backupText);
@@ -310,7 +344,9 @@ try {
   await waitFor("JSON.parse(localStorage.getItem('personal-os.suite-data.v1') || '{}').notes?.length === 0 && JSON.parse(localStorage.getItem('personal-os.suite-data.v1') || '{}').tasks?.length === 0", 'Personal OS clear app data');
   await uploadPersonalOsBackup(backupText, 'personal-os-backup-verified.json');
   await waitFor("JSON.parse(localStorage.getItem('personal-os.suite-data.v1') || '{}').notes?.length === 1 && JSON.parse(localStorage.getItem('personal-os.suite-data.v1') || '{}').projects?.length === 1 && JSON.parse(localStorage.getItem('personal-os.suite-data.v1') || '{}').tasks?.[0]?.status === 'done' && JSON.parse(localStorage.getItem('personal-os.suite-data.v1') || '{}').research?.length === 1 && JSON.parse(localStorage.getItem('personal-os.suite-data.v1') || '{}').documents?.length === 1 && JSON.parse(localStorage.getItem('personal-os.suite-data.v1') || '{}').media?.[0]?.stage === 'script'", 'Personal OS verified backup restoration', 15000);
-  console.log('PASS Personal OS backup restores all six data collections after clearing the suite data');
+  assert.equal(await evaluate("JSON.parse(localStorage.getItem('personal-os.suite-data.v1')).observations.length"), 1);
+  assert.equal(await evaluate("JSON.parse(localStorage.getItem('personal-os.suite-data.v1')).vaultEntries.length"), 1);
+  console.log('PASS Personal OS backup restores all eight data collections after clearing the suite data');
 
   // Keep the Archive Lab download assertion isolated from the Personal OS backup file.
   await rm(path.join(downloads, backupName), { force: true });
