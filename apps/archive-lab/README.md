@@ -16,18 +16,16 @@ Open <http://localhost:4173/apps/archive-lab/>.
 
 Do not open `index.html` directly from `file://`; ES modules, import maps, and Web Crypto require an appropriate server/secure context. No npm build step is required for this static demo.
 
-## Manual acceptance checklist
+## Acceptance checklist
 
-- [ ] Create a record; refresh the page and confirm it remains.
-- [ ] Edit a title/notes/status; refresh and confirm the changes remain.
-- [ ] Export an archive; verify a JSON file is downloaded.
-- [ ] Clear records; import the exported file and confirm the records return.
-- [ ] Modify one field inside an exported file without updating the digest; confirm import is rejected and existing records remain.
-- [ ] Try malformed JSON, an archive for another app, an oversized file, and a correctly checksummed but invalid record; confirm rejection without overwrite.
-- [ ] Try a v1 `record-vault` archive using the automated fixture/test; confirm it migrates to schema v2.
-- [ ] Test in at least two browsers and after clearing site data only on disposable test data.
+- [x] Chromium CI: create/edit/reload records, export an archive, clear records, restore the archive, and reject a tampered archive without overwrite.
+- [x] Chromium CI: Khidma Desk customer/job/payment workflow, export/clear/restore, tampered archive rejection, Arabic RTL at 390px.
+- [x] Unit tests: malformed JSON, wrong application, unsupported format/schema, size limits, domain validation and v1-to-v2 Record Vault migration.
+- [ ] Manually test in at least two browsers.
+- [ ] Test an external backup after deleting browser site data; use disposable test data only.
+- [ ] Perform keyboard and screen-reader checks, especially for dialogs and Arabic RTL mixed-direction values.
 
-The checklist is not marked complete by automated unit tests alone. Browser-level manual checks must be performed and recorded separately.
+The checked items are automated acceptance evidence from CI, not a claim of production readiness. Manual cross-browser, accessibility, and real restore-after-data-loss validation remain open.
 
 ## Data and threat model
 
