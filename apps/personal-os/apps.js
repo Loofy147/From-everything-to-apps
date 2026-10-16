@@ -12,8 +12,16 @@ const DOCUMENT_FORMATS = ['md', 'txt'];
 const MEDIA_FORMATS = ['short-video', 'advertisement', 'product-demo', 'presentation', 'audio', 'other'];
 const MEDIA_STAGES = ['brief', 'script', 'assets', 'edit', 'review', 'done'];
 const PRIORITIES = ['low', 'normal', 'high'];
+const OBSERVATION_KINDS = ['finding', 'decision', 'risk', 'incident', 'idea', 'follow-up'];
+const OBSERVATION_SEVERITIES = ['info', 'low', 'medium', 'high', 'critical'];
+const OBSERVATION_STATUSES = ['open', 'reviewed', 'actionable', 'resolved'];
+const VAULT_STATUSES = ['planned', 'configured', 'rotation-due', 'revoked'];
+const VAULT_LOCATIONS = ['appdeploy', 'github-actions', 'vercel', 'supabase', 'other'];
 
-const emptyState = () => ({ schemaVersion: 1, notes: [], projects: [], tasks: [], research: [], documents: [], media: [] });
+const emptyState = () => ({
+  schemaVersion: 2, notes: [], projects: [], tasks: [], research: [], documents: [], media: [],
+  observations: [], vaultEntries: [],
+});
 let state = emptyState();
 let storageHealthy = true;
 let renderSearch = '';
@@ -107,8 +115,13 @@ function requireUniqueIds(items, label) {
 }
 
 function validateState(candidate) {
-  if (!hasExactKeys(candidate, ['schemaVersion', 'notes', 'projects', 'tasks', 'research', 'documents', 'media']) || candidate.schemaVersion !== 1) throw new Error('Unsupported Personal OS data schema.');
-  for (const key of ['notes', 'projects', 'tasks', 'research', 'documents', 'media']) {
+  const legacyKeys = ['schemaVersion', 'notes', 'projects', 'tasks', 'research', 'documents', 'media'];
+  if (isRecord(candidate) && candidate.schemaVersion === 1 && hasExactKeys(candidate, legacyKeys)) {
+    candidate = { ...candidate, schemaVersion: 2, observations: [], vaultEntries: [] };
+  }
+  const collectionKeys = ['notes', 'projects', 'tasks', 'research', 'documents', 'media', 'observations', 'vaultEntries'];
+  if (!hasExactKeys(candidate, ['schemaVersion', ...collectionKeys]) || candidate.schemaVersion !== 2) throw new Error('Unsupported Personal OS data schema.');
+  for (const key of collectionKeys) {
     if (!Array.isArray(candidate[key])) throw new Error('Personal OS data is missing the ' + key + ' collection.');
   }
   requireUniqueIds(candidate.notes, 'Notes');
@@ -117,8 +130,11 @@ function validateState(candidate) {
   requireUniqueIds(candidate.research, 'Research library');
   requireUniqueIds(candidate.documents, 'Documents');
   requireUniqueIds(candidate.media, 'Media projects');
+  requireUniqueIds(candidate.observations, 'Observations');
+  requireUniqueIds(candidate.vaultEntries, 'Vault inventory');
 
   const projectIds = new Set(candidate.projects.map((project) => project.id));
+  const taskIds = new Set(candidate.tasks.map((task) => task.id));
   for (const note of candidate.notes) {
     if (!hasExactKeys(note, ['id', 'title', 'body', 'tags', 'pinned', 'createdAt', 'updatedAt']) || !boundedString(note.title, 140, true) ||
       !boundedString(note.body, 30000, true) || !validTags(note.tags) ||
@@ -161,6 +177,34 @@ function validateState(candidate) {
       !validSourceUrl(item.outputUrl) || !validTags(item.tags) ||
       !validTimestamp(item.createdAt) || !validTimestamp(item.updatedAt)) {
       throw new Error('A media project has invalid fields or output URL.');
+    }
+  }
+
+  for (const item of candidate.observations) {
+    if (!hasExactKeys(item, ['id', 'title', 'details', 'kind', 'severity', 'status', 'tags', 'relatedTaskId', 'sourceUrl', 'createdAt', 'updatedAt']) ||
+      !boundedString(item.title, 180, true) || !boundedString(item.details, 20000) ||
+      !OBSERVATION_KINDS.includes(item.kind) || !OBSERVATION_SEVERITIES.includes(item.severity) ||
+      !OBSERVATION_STATUSES.includes(item.status) || !validTags(item.tags) ||
+      !(item.relatedTaskId === null || taskIds.has(item.relatedTaskId)) ||
+      !(item.sourceUrl === null || boundedString(item.sourceUrl, 1000)) || !validSourceUrl(item.sourceUrl) ||
+      !validTimestamp(item.createdAt) || !validTimestamp(item.updatedAt)) {
+      throw new Error('An observation has invalid fields, source URL or related task reference.');
+    }
+  }
+  for (const item of candidate.vaultEntries) {
+    if (!hasExactKeys(item, ['id', 'label', 'provider', 'secretName', 'purpose', 'storageLocation', 'scopes', 'rotationDate', 'status', 'relatedTaskId', 'createdAt', 'updatedAt']) ||
+      !boundedString(item.label, 140, true) || !boundedString(item.provider, 100, true) ||
+      !boundedString(item.secretName, 100, true) || !/^[A-Z_][A-Z0-9_]{0,99}$/.test(item.secretName) ||
+      !boundedString(item.purpose, 1200) || !VAULT_LOCATIONS.includes(item.storageLocation) ||
+      !Array.isArray(item.scopes) || item.scopes.length > 12 ||
+      !item.scopes.every((scope) => boundedString(scope, 100, true)) || new Set(item.scopes).size !== item.scopes.length ||
+      !(item.rotationDate === null || validDateOnly(item.rotationDate)) || !VAULT_STATUSES.includes(item.status) ||
+      !(item.relatedTaskId === null || taskIds.has(item.relatedTaskId)) ||
+      !validTimestamp(item.createdAt) || !validTimestamp(item.updatedAt)) {
+      throw new Error('A vault inventory entry has invalid metadata or a missing related task.');
+    }
+    if (Object.hasOwn(item, 'value') || Object.hasOwn(item, 'token') || Object.hasOwn(item, 'secretValue')) {
+      throw new Error('Credential values are forbidden in the browser-side vault inventory.');
     }
   }
 
@@ -218,7 +262,7 @@ function writeState(candidate, { recovery = false, successMessage = 'Personal OS
 }
 
 function updateSafetyUI() {
-  for (const id of ['note-form', 'project-form', 'task-form', 'research-form', 'document-form', 'media-form']) {
+  for (const id of ['note-form', 'project-form', 'task-form', 'research-form', 'document-form', 'media-form', 'observation-form', 'vault-form']) {
     const form = $('#' + id);
     if (form) $$('button[type="submit"]', form).forEach((button) => { button.disabled = !storageHealthy; });
   }
@@ -573,8 +617,10 @@ function renderData() {
   $('#data-project-count').textContent = String(state.projects.length);
   $('#data-document-count').textContent = String(state.documents.length);
   $('#data-media-count').textContent = String(state.media.length);
+  $('#data-observation-count').textContent = String(state.observations.length);
+  $('#data-vault-count').textContent = String(state.vaultEntries.length);
   $('#backup-file-status').textContent = storageHealthy
-    ? 'Current records are local to this browser. The archive includes notes, projects, tasks, research, documents and media projects.'
+    ? 'Current records are local to this browser. The archive includes notes, projects, tasks, research, documents, media briefs, observations and credential inventory metadata (never secret values).'
     : 'Data validation failed. Restore a valid Personal OS backup or clear app data to recover.';
   $('#export-suite-backup').disabled = !storageHealthy;
 }
@@ -586,6 +632,7 @@ function renderAllApps() {
   renderResearch();
   renderDocuments();
   renderMedia();
+  renderOperations();
   renderData();
   updateSafetyUI();
 }
@@ -600,7 +647,7 @@ async function exportBackup() {
       appId: APP_ID,
       schemaVersion: 1,
       data: state,
-      metadata: { product: 'Personal OS Apps', scope: 'notes-projects-tasks-research-documents-media' },
+      metadata: { product: 'Personal OS Apps', scope: 'notes-projects-tasks-research-documents-media-observations-vault-inventory' },
       maxBytes: MAX_ARCHIVE_BYTES,
     });
     const serialized = await stringifyArchive(archive, { maxBytes: MAX_ARCHIVE_BYTES });
@@ -635,7 +682,7 @@ async function importBackup(file) {
       maxBytes: MAX_ARCHIVE_BYTES,
     });
     const validated = validateState(parsed.data);
-    const accepted = window.confirm('Restore this verified backup and replace the current Notes, Work Board, Research, Documents and Media data? Export your current records first if you need to keep them.');
+    const accepted = window.confirm('Restore this verified backup and replace the current workspace records, observations and credential inventory metadata? Secret values are never included. Export your current records first if you need to keep them.');
     if (!accepted) {
       announce('Restore cancelled. Current app data was not changed.');
       return;
@@ -651,12 +698,14 @@ async function importBackup(file) {
 }
 
 function clearSuiteData() {
-  const confirmed = window.confirm('Permanently clear Notes, Projects, Tasks and Research items in this browser? Export a backup first if needed.');
+  const confirmed = window.confirm('Permanently clear all Personal OS workspace records, observations and credential inventory metadata in this browser? Secret values are not stored here. Export a backup first if needed.');
   if (!confirmed) return;
   resetNoteForm();
   resetTaskForm();
   resetResearchForm();
-  writeState(emptyState(), { recovery: true, successMessage: 'Personal OS app data cleared from this browser.' });
+  resetObservationForm();
+  resetVaultForm();
+  writeState(emptyState(), { recovery: true, successMessage: 'Personal OS workspace data cleared from this browser.' });
 }
 
 function handleCollectionAction(event) {
@@ -686,7 +735,11 @@ function handleCollectionAction(event) {
     if (action === 'task-advance') advanceTask(id);
     if (action === 'task-delete') {
       const task = getTask(id);
-      if (task && window.confirm('Delete task "' + task.title + '"?')) {
+      const linkedObservation = state.observations.some((item) => item.relatedTaskId === id);
+      const linkedCredential = state.vaultEntries.some((item) => item.relatedTaskId === id);
+      if (task && (linkedObservation || linkedCredential)) {
+        announce('This task is linked to an observation or credential. Edit those records to remove the link before deleting the task.', 'error');
+      } else if (task && window.confirm('Delete task "' + task.title + '"?')) {
         const wasEditing = $('#task-id').value === id;
         if (writeState({ ...state, tasks: state.tasks.filter((item) => item.id !== id) }, { successMessage: 'Task deleted.' }) && wasEditing) resetTaskForm();
       }
@@ -979,6 +1032,318 @@ function submitMediaProject(event) {
 }
 
 
+
+function parseScopes(value) {
+  const parts = String(value || '').split(',').map((scope) => scope.trim().slice(0, 100)).filter(Boolean);
+  return [...new Set(parts)].slice(0, 12);
+}
+
+function taskLabel(task) {
+  const project = task.projectId ? getProject(task.projectId)?.name : '';
+  return task.title + (project ? ' · ' + project : '') + (task.status === 'done' ? ' · done' : '');
+}
+
+function refreshRelatedTaskOptions() {
+  for (const select of [$('#observation-related-task'), $('#vault-related-task')]) {
+    const selected = select.value;
+    select.replaceChildren(new Option('No linked task', ''));
+    [...state.tasks].sort((a, b) => a.title.localeCompare(b.title)).forEach((task) => {
+      select.add(new Option(taskLabel(task), task.id));
+    });
+    if ([...select.options].some((option) => option.value === selected)) select.value = selected;
+  }
+}
+
+function renderObservationCard(item) {
+  const card = element('article', 'collection-card observation-card');
+  card.id = 'observation-' + item.id;
+  card.tabIndex = -1;
+  const header = element('div', 'collection-card-header');
+  const heading = element('div', 'collection-title-wrap');
+  heading.append(element('h3', '', item.title));
+  heading.append(element('span', 'small-muted', item.kind + ' · Updated ' + new Date(item.updatedAt).toLocaleDateString()));
+  header.append(heading);
+  const actions = element('div', 'card-actions');
+  actions.append(button('Edit', 'observation-edit', item.id));
+  actions.append(button('Delete', 'observation-delete', item.id, 'small-action danger-action'));
+  header.append(actions);
+  card.append(header);
+  const statusRow = element('div', 'tag-row');
+  statusRow.append(element('span', 'status-badge observation-severity-' + item.severity, item.severity.toUpperCase()));
+  const statusLabel = element('label', 'inline-select-label', 'State');
+  const status = element('select', 'inline-state-select');
+  status.dataset.action = 'observation-status';
+  status.dataset.id = item.id;
+  status.setAttribute('aria-label', 'Observation state for ' + item.title);
+  for (const [value, label] of [['open', 'Open'], ['reviewed', 'Reviewed'], ['actionable', 'Actionable'], ['resolved', 'Resolved']]) status.add(new Option(label, value));
+  status.value = item.status;
+  statusLabel.append(status);
+  statusRow.append(statusLabel);
+  card.append(statusRow);
+  if (item.details) card.append(element('p', 'collection-body', item.details));
+  const meta = [];
+  if (item.relatedTaskId) {
+    const related = getTask(item.relatedTaskId);
+    if (related) meta.push('Task: ' + related.title);
+  }
+  if (item.sourceUrl) meta.push('Source: ' + new URL(item.sourceUrl).hostname);
+  if (meta.length) card.append(element('p', 'small-muted', meta.join(' · ')));
+  if (item.sourceUrl) card.append(externalLink(item.sourceUrl, 'Open evidence source ↗'));
+  if (item.tags.length) {
+    const tags = element('div', 'tag-row');
+    makeTags(tags, item.tags);
+    card.append(tags);
+  }
+  hostAppendRelatedTask(card, item.relatedTaskId, 'observation');
+  return card;
+}
+
+function hostAppendRelatedTask(card, taskId, kind) {
+  if (!taskId) return;
+  const task = getTask(taskId);
+  if (!task) return;
+  const actions = element('div', 'card-actions operation-related-actions');
+  actions.append(button('Open linked task', kind + '-open-task', taskId));
+  card.append(actions);
+}
+
+function renderVaultCard(item) {
+  const card = element('article', 'collection-card vault-card');
+  card.id = 'vault-entry-' + item.id;
+  card.tabIndex = -1;
+  const header = element('div', 'collection-card-header');
+  const heading = element('div', 'collection-title-wrap');
+  heading.append(element('h3', '', item.label));
+  heading.append(element('span', 'small-muted', item.provider + ' · ' + item.secretName));
+  header.append(heading);
+  const actions = element('div', 'card-actions');
+  actions.append(button('Edit metadata', 'vault-edit', item.id));
+  actions.append(button('Delete', 'vault-delete', item.id, 'small-action danger-action'));
+  header.append(actions);
+  card.append(header);
+  card.append(element('p', 'collection-body', item.purpose || 'Purpose not recorded.'));
+  const locationLabels = { appdeploy: 'AppDeploy secrets', 'github-actions': 'GitHub Actions secrets', vercel: 'Vercel environment variables', supabase: 'Supabase secrets', other: 'Other / external vault' };
+  const meta = [
+    'Storage: ' + locationLabels[item.storageLocation],
+    item.rotationDate ? 'Rotate by ' + item.rotationDate : 'No rotation date',
+  ];
+  if (item.relatedTaskId) {
+    const task = getTask(item.relatedTaskId);
+    if (task) meta.push('Task: ' + task.title);
+  }
+  card.append(element('p', 'small-muted', meta.join(' · ')));
+  const row = element('div', 'vault-controls');
+  const stateLabel = element('label', 'inline-select-label', 'Inventory state');
+  const stateSelect = element('select', 'inline-state-select');
+  stateSelect.dataset.action = 'vault-status';
+  stateSelect.dataset.id = item.id;
+  stateSelect.setAttribute('aria-label', 'Inventory state for ' + item.label);
+  for (const [value, label] of [['planned', 'Reference planned'], ['configured', 'Recorded in provider'], ['rotation-due', 'Rotation due'], ['revoked', 'Revoked']]) stateSelect.add(new Option(label, value));
+  stateSelect.value = item.status;
+  stateLabel.append(stateSelect);
+  row.append(stateLabel);
+  card.append(row);
+  if (item.scopes.length) {
+    const tags = element('div', 'tag-row');
+    item.scopes.forEach((scope) => tags.append(element('span', 'tag', scope)));
+    card.append(tags);
+  }
+  card.append(element('p', 'vault-safety-copy', 'Metadata only. The key/token value is not stored or retrievable here.'));
+  hostAppendRelatedTask(card, item.relatedTaskId, 'vault');
+  return card;
+}
+
+function renderOperations() {
+  refreshRelatedTaskOptions();
+  const observationFilter = $('#observations-search').value.trim().toLocaleLowerCase();
+  const observationsHost = $('#observations-list');
+  observationsHost.replaceChildren();
+  const observations = [...state.observations].sort(whenUpdated).filter((item) =>
+    !observationFilter || [item.title, item.details, item.kind, item.severity, item.status, ...item.tags].join(' ').toLocaleLowerCase().includes(observationFilter));
+  if (!observations.length) observationsHost.append(emptyMessage(observationFilter ? 'No observations match this search.' : 'No observations yet. Record a finding, decision, risk or incident.'));
+  observations.forEach((item) => observationsHost.append(renderObservationCard(item)));
+  $('#observations-count').textContent = String(state.observations.length);
+  $('#observations-nav-count').textContent = String(state.observations.filter((item) => item.status === 'open' || item.status === 'actionable').length);
+
+  const vaultFilter = $('#vault-search').value.trim().toLocaleLowerCase();
+  const vaultHost = $('#vault-list');
+  vaultHost.replaceChildren();
+  const vaultEntries = [...state.vaultEntries].sort(whenUpdated).filter((item) =>
+    !vaultFilter || [item.label, item.provider, item.secretName, item.purpose, item.storageLocation, item.status, ...item.scopes].join(' ').toLocaleLowerCase().includes(vaultFilter));
+  if (!vaultEntries.length) vaultHost.append(emptyMessage(vaultFilter ? 'No credential records match this search.' : 'No credential references recorded yet. Add metadata without pasting the secret value.'));
+  vaultEntries.forEach((item) => vaultHost.append(renderVaultCard(item)));
+  $('#vault-count').textContent = String(state.vaultEntries.length);
+  $('#vault-nav-count').textContent = String(state.vaultEntries.filter((item) => item.status !== 'revoked').length);
+}
+
+function resetObservationForm() {
+  $('#observation-form').reset();
+  $('#observation-id').value = '';
+  $('#observation-kind').value = 'finding';
+  $('#observation-severity').value = 'medium';
+  $('#observation-status').value = 'open';
+  $('#observation-form-title').textContent = 'Capture an observation';
+  $('#observation-cancel-edit').hidden = true;
+}
+
+function editObservation(id) {
+  const item = state.observations.find((record) => record.id === id);
+  if (!item) return;
+  $('#observation-id').value = item.id;
+  $('#observation-title').value = item.title;
+  $('#observation-details').value = item.details;
+  $('#observation-kind').value = item.kind;
+  $('#observation-severity').value = item.severity;
+  $('#observation-status').value = item.status;
+  $('#observation-tags').value = item.tags.join(', ');
+  $('#observation-related-task').value = item.relatedTaskId || '';
+  $('#observation-source-url').value = item.sourceUrl || '';
+  $('#observation-form-title').textContent = 'Edit observation';
+  $('#observation-cancel-edit').hidden = false;
+  $('#observation-title').focus();
+  $('#observation-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function submitObservation(event) {
+  event.preventDefault();
+  const title = $('#observation-title').value.trim();
+  const sourceUrl = $('#observation-source-url').value.trim();
+  if (!title) return;
+  if (!validSourceUrl(sourceUrl)) {
+    announce('Observation source must use HTTP or HTTPS and must not contain embedded credentials.', 'error');
+    $('#observation-source-url').focus();
+    return;
+  }
+  const now = new Date().toISOString();
+  const old = state.observations.find((record) => record.id === $('#observation-id').value);
+  const relatedTaskId = $('#observation-related-task').value || null;
+  if (relatedTaskId && !getTask(relatedTaskId)) {
+    announce('Choose an existing task or no linked task.', 'error');
+    return;
+  }
+  const item = {
+    id: old?.id || newId(),
+    title,
+    details: $('#observation-details').value.trim(),
+    kind: $('#observation-kind').value,
+    severity: $('#observation-severity').value,
+    status: $('#observation-status').value,
+    tags: parseTags($('#observation-tags').value),
+    relatedTaskId,
+    sourceUrl: sourceUrl || null,
+    createdAt: old?.createdAt || now,
+    updatedAt: now,
+  };
+  if (writeState({ ...state, observations: old ? state.observations.map((record) => record.id === old.id ? item : record) : [item, ...state.observations] },
+    { successMessage: old ? 'Observation updated.' : 'Observation captured.' })) resetObservationForm();
+}
+
+function resetVaultForm() {
+  $('#vault-form').reset();
+  $('#vault-id').value = '';
+  $('#vault-storage-location').value = 'appdeploy';
+  $('#vault-status').value = 'planned';
+  $('#vault-form-title').textContent = 'Register a credential';
+  $('#vault-cancel-edit').hidden = true;
+}
+
+function editVaultEntry(id) {
+  const item = state.vaultEntries.find((record) => record.id === id);
+  if (!item) return;
+  $('#vault-id').value = item.id;
+  $('#vault-label').value = item.label;
+  $('#vault-provider').value = item.provider;
+  $('#vault-secret-name').value = item.secretName;
+  $('#vault-purpose').value = item.purpose;
+  $('#vault-storage-location').value = item.storageLocation;
+  $('#vault-scopes').value = item.scopes.join(', ');
+  $('#vault-rotation-date').value = item.rotationDate || '';
+  $('#vault-status').value = item.status;
+  $('#vault-related-task').value = item.relatedTaskId || '';
+  $('#vault-form-title').textContent = 'Edit credential metadata';
+  $('#vault-cancel-edit').hidden = false;
+  $('#vault-label').focus();
+  $('#vault-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function submitVaultEntry(event) {
+  event.preventDefault();
+  const label = $('#vault-label').value.trim();
+  const provider = $('#vault-provider').value.trim();
+  const secretName = $('#vault-secret-name').value.trim();
+  const relatedTaskId = $('#vault-related-task').value || null;
+  const rotationDate = $('#vault-rotation-date').value || null;
+  if (!label || !provider || !secretName) return;
+  if (!/^[A-Z_][A-Z0-9_]{0,99}$/.test(secretName)) {
+    announce('Use an uppercase environment-style name such as SERVICE_API_KEY. Do not enter the key/token value.', 'error');
+    $('#vault-secret-name').focus();
+    return;
+  }
+  if (relatedTaskId && !getTask(relatedTaskId)) {
+    announce('Choose an existing task or no linked task.', 'error');
+    return;
+  }
+  const now = new Date().toISOString();
+  const old = state.vaultEntries.find((record) => record.id === $('#vault-id').value);
+  const item = {
+    id: old?.id || newId(),
+    label,
+    provider,
+    secretName,
+    purpose: $('#vault-purpose').value.trim(),
+    storageLocation: $('#vault-storage-location').value,
+    scopes: parseScopes($('#vault-scopes').value),
+    rotationDate,
+    status: $('#vault-status').value,
+    relatedTaskId,
+    createdAt: old?.createdAt || now,
+    updatedAt: now,
+  };
+  if (writeState({ ...state, vaultEntries: old ? state.vaultEntries.map((record) => record.id === old.id ? item : record) : [item, ...state.vaultEntries] },
+    { successMessage: old ? 'Credential metadata updated.' : 'Credential reference registered. Secret value was never collected.' })) resetVaultForm();
+}
+
+function handleOperationsAction(event) {
+  const actionButton = event.target.closest('button[data-action]');
+  if (actionButton) {
+    const { action, id } = actionButton.dataset;
+    if (action === 'observation-edit') editObservation(id);
+    if (action === 'vault-edit') editVaultEntry(id);
+    if (action === 'observation-delete') {
+      const item = state.observations.find((record) => record.id === id);
+      if (item && window.confirm('Delete observation "' + item.title + '"?')) {
+        if ($('#observation-id').value === id) resetObservationForm();
+        writeState({ ...state, observations: state.observations.filter((record) => record.id !== id) }, { successMessage: 'Observation deleted.' });
+      }
+    }
+    if (action === 'vault-delete') {
+      const item = state.vaultEntries.find((record) => record.id === id);
+      if (item && window.confirm('Delete credential metadata for "' + item.label + '"? This does not revoke a key; revoke it at its provider first.')) {
+        if ($('#vault-id').value === id) resetVaultForm();
+        writeState({ ...state, vaultEntries: state.vaultEntries.filter((record) => record.id !== id) }, { successMessage: 'Credential metadata deleted. Any provider-side secret was not changed.' });
+      }
+    }
+    if (action === 'observation-open-task' || action === 'vault-open-task') {
+      const task = getTask(id);
+      if (task) window.dispatchEvent(new CustomEvent('personal-os:navigate', { detail: { view: 'board', target: '#task-' + task.id } }));
+    }
+  }
+  const observationSelect = event.target.closest('select[data-action="observation-status"]');
+  if (observationSelect) {
+    const item = state.observations.find((record) => record.id === observationSelect.dataset.id);
+    if (!item || !OBSERVATION_STATUSES.includes(observationSelect.value)) return;
+    writeState({ ...state, observations: state.observations.map((record) => record.id === item.id ? { ...record, status: observationSelect.value, updatedAt: new Date().toISOString() } : record) },
+      { successMessage: 'Observation state updated.' });
+  }
+  const vaultSelect = event.target.closest('select[data-action="vault-status"]');
+  if (vaultSelect) {
+    const item = state.vaultEntries.find((record) => record.id === vaultSelect.dataset.id);
+    if (!item || !VAULT_STATUSES.includes(vaultSelect.value)) return;
+    writeState({ ...state, vaultEntries: state.vaultEntries.map((record) => record.id === item.id ? { ...record, status: vaultSelect.value, updatedAt: new Date().toISOString() } : record) },
+      { successMessage: 'Credential inventory state updated. Change the actual secret at its provider separately.' });
+  }
+}
+
 export function getPersonalAppsSnapshot() {
   return {
     notes: state.notes.map(({ id, title, body, tags, pinned, updatedAt }) => ({ id, title, body, tags, pinned, updatedAt })),
@@ -987,6 +1352,8 @@ export function getPersonalAppsSnapshot() {
     research: state.research.map(({ id, title, url, summary, tags, status, updatedAt }) => ({ id, title, url, summary, tags, status, updatedAt })),
     documents: state.documents.map(({ id, title, format, tags, updatedAt }) => ({ id, title, format, tags, updatedAt })),
     media: state.media.map(({ id, title, format, stage, notes, outputUrl, tags, updatedAt }) => ({ id, title, format, stage, notes, outputUrl, tags, updatedAt })),
+    observations: state.observations.map(({ id, title, details, kind, severity, status, tags, relatedTaskId, sourceUrl, updatedAt }) => ({ id, title, details, kind, severity, status, tags, relatedTaskId, sourceUrl, updatedAt })),
+    vaultEntries: state.vaultEntries.map(({ id, label, provider, secretName, purpose, storageLocation, scopes, rotationDate, status, relatedTaskId, updatedAt }) => ({ id, label, provider, secretName, purpose, storageLocation, scopes, rotationDate, status, relatedTaskId, updatedAt })),
     storageHealthy,
   };
 }
@@ -1030,6 +1397,20 @@ export async function bootPersonalApps() {
   $('#media-search').addEventListener('input', renderMedia);
   $('#media-list').addEventListener('click', handleCollectionAction);
   $('#media-list').addEventListener('change', handleCollectionAction);
+
+  $('#observation-form').addEventListener('submit', submitObservation);
+  $('#observation-reset').addEventListener('click', resetObservationForm);
+  $('#observation-cancel-edit').addEventListener('click', resetObservationForm);
+  $('#observations-search').addEventListener('input', renderOperations);
+  $('#observations-list').addEventListener('click', handleOperationsAction);
+  $('#observations-list').addEventListener('change', handleOperationsAction);
+
+  $('#vault-form').addEventListener('submit', submitVaultEntry);
+  $('#vault-reset').addEventListener('click', resetVaultForm);
+  $('#vault-cancel-edit').addEventListener('click', resetVaultForm);
+  $('#vault-search').addEventListener('input', renderOperations);
+  $('#vault-list').addEventListener('click', handleOperationsAction);
+  $('#vault-list').addEventListener('change', handleOperationsAction);
 
   $('#export-suite-backup').addEventListener('click', exportBackup);
   $('#import-suite-backup').addEventListener('change', (event) => { void importBackup(event.currentTarget.files?.[0]); });
