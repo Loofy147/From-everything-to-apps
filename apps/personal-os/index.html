@@ -110,7 +110,12 @@
         <section class="personal-dashboard" aria-labelledby="dashboard-title">
           <div class="dashboard-heading">
             <div><p class="eyebrow">PERSONAL WORKSPACE</p><h2 id="dashboard-title">Your day, at a glance</h2><p>Live summaries from your own local apps. Start with the next action, then jump directly to the relevant work.</p></div>
-            <button class="button button-secondary" type="button" data-nav="board">Open Work Board <span aria-hidden="true">→</span></button>
+            <div class="dashboard-quick-actions" aria-label="Create a new item">
+              <button class="button button-primary" type="button" data-quick-create="notes">＋ Note</button>
+              <button class="button button-secondary" type="button" data-quick-create="board">＋ Task</button>
+              <button class="button button-secondary" type="button" data-quick-create="research">＋ Research</button>
+              <button class="button button-secondary" type="button" data-quick-create="media">＋ Brief</button>
+            </div>
           </div>
           <div class="dashboard-stats" aria-label="Personal workspace activity">
             <article class="dashboard-stat"><span class="dashboard-stat-icon icon-violet" aria-hidden="true">↗</span><div><span>Open tasks</span><strong id="dashboard-open-tasks">0</strong><small>Next + in progress</small></div></article>
