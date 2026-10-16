@@ -199,7 +199,10 @@ try {
   await waitFor("JSON.parse(localStorage.getItem('khidma-desk.state.v1') || '{}').jobs?.some(j => j.status === 'scheduled')", 'Khidma status transition');
   await evaluate("(() => { document.querySelector('.job-card button[data-action=payment]').click(); document.querySelector('#payment-amount').value='3000'; document.querySelector('#payment-method').value='cash'; document.querySelector('#payment-reference').value='E2E receipt'; document.querySelector('#payment-form').requestSubmit(); return true; })()");
   await waitFor("JSON.parse(localStorage.getItem('khidma-desk.state.v1') || '{}').jobs?.some(j => j.payments?.length === 1 && j.payments[0].amountDzd === 3000)", 'Khidma manual payment record');
-  console.log('PASS status transition and manually recorded payment');
+  await cdp.send('Page.reload', {}, session);
+  await waitFor("document.querySelector('#status')?.dataset.ready === 'true'", 'Khidma reload');
+  await waitFor("document.querySelector('.job-card h3')?.textContent === 'Repair air conditioner' && document.querySelector('.payment-entry') !== null", 'Khidma job and payment restore after reload');
+  console.log('PASS status transition, manual payment and reload persistence');
 
   await evaluate("document.querySelector('#export').click(); true");
   const khidmaArchivePath = await until(async () => {
