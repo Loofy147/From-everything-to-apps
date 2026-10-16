@@ -82,6 +82,12 @@ function client(socket) {
       pending.delete(packet.id); clearTimeout(item.timer);
       if (packet.error) item.reject(new Error(item.method + ': ' + packet.error.message));
       else item.resolve(packet.result || {});
+    } else if (packet.method === 'Runtime.exceptionThrown' && packet.sessionId) {
+      const exception = packet.params?.exceptionDetails;
+      browserErrors.push('PAGE EXCEPTION: ' + (exception?.exception?.description || exception?.text || 'Unknown exception'));
+    } else if (packet.method === 'Runtime.consoleAPICalled' && packet.sessionId && packet.params?.type === 'error') {
+      const details = packet.params.args?.map((arg) => arg.value || arg.description || '').join(' ');
+      browserErrors.push('PAGE CONSOLE ERROR: ' + details);
     } else if (packet.method === 'Page.javascriptDialogOpening' && packet.sessionId) {
       void send('Page.handleJavaScriptDialog', { accept: true }, packet.sessionId).catch(() => {});
     }
@@ -157,7 +163,16 @@ try {
   assert.equal(shellMetrics.modules, 3);
   assert.ok(shellMetrics.integrations >= 15, 'Expected a useful integration and license catalog.');
   assert.ok(shellMetrics.scrollWidth <= shellMetrics.width, 'Personal OS desktop layout has horizontal overflow.');
-  console.log('PASS Personal OS root entry, app registry, capability modules and integration catalog render');
+  assert.equal(await evaluate("document.querySelector('#dashboard-open-tasks')?.textContent"), '0');
+  assert.ok(await evaluate("document.querySelector('#dashboard-title')?.textContent.includes('Your day')"), 'Personal OS overview should open on the live workspace dashboard.');
+  await evaluate("document.querySelector('[data-quick-create=notes]').click(); true");
+  await waitFor("!document.querySelector('#view-notes')?.hidden && document.activeElement?.id === 'note-title'", 'dashboard quick-create opens the Notes editor');
+  await evaluate("document.querySelector('[data-nav=overview]').click(); true");
+  await cdp.send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true }, session);
+  const mobileDashboard = await evaluate("({width:innerWidth,scrollWidth:document.documentElement.scrollWidth})");
+  assert.ok(mobileDashboard.scrollWidth <= mobileDashboard.width, 'Personal OS mobile dashboard has horizontal overflow: viewport ' + mobileDashboard.width + ', document ' + mobileDashboard.scrollWidth);
+  await cdp.send('Emulation.clearDeviceMetricsOverride', {}, session);
+  console.log('PASS Personal OS root entry, live dashboard, quick-create actions, mobile layout, app registry and integration catalog render');
 
   await evaluate("document.querySelector('[data-nav=integrations]').click(); true");
   await waitFor("!document.querySelector('#view-integrations')?.hidden && document.querySelectorAll('#integrations-grid .integration-card').length >= 15", 'Personal OS integrations view');
@@ -165,7 +180,10 @@ try {
   assert.ok(workspaceConnectors >= 5, 'Workspace-access labels should be present for connector tools.');
   assert.ok(await evaluate("[...document.querySelectorAll('#integrations-grid .integration-foot span')].some(el => el.textContent.includes('Not connected to this app'))"), 'Workspace tool cards must state that the deployed app is not connected.');
   await evaluate("(() => { const search=document.querySelector('#global-search'); search.value='supabase'; search.dispatchEvent(new Event('input',{bubbles:true})); return true; })()");
-  await waitFor("document.querySelectorAll('#integrations-grid .integration-card').length === 1 && document.querySelector('#integrations-grid .integration-card h3')?.textContent === 'Supabase'", 'Personal OS integration search');
+  await wait(250);
+  const integrationSearchState = await evaluate("({query:document.querySelector('#global-search')?.value,visible:!document.querySelector('#view-integrations')?.hidden,count:document.querySelectorAll('#integrations-grid .integration-card').length,names:[...document.querySelectorAll('#integrations-grid .integration-card h3')].map(node=>node.textContent),resultCount:document.querySelector('#integration-result-count')?.textContent,filter:[...document.querySelectorAll('[data-integration-filter]')].find(node=>node.classList.contains('is-active'))?.dataset.integrationFilter,status:document.querySelector('#global-status')?.textContent})");
+  assert.ok(integrationSearchState.count >= 1 && integrationSearchState.names.includes('Supabase'), 'Personal OS integration search should include Supabase: ' + JSON.stringify(integrationSearchState));
+  assert.equal(integrationSearchState.names[0], 'Supabase', 'Direct-name matches should rank ahead of cross-reference matches: ' + JSON.stringify(integrationSearchState));
   await evaluate("(() => { const search=document.querySelector('#global-search'); search.value=''; search.dispatchEvent(new Event('input',{bubbles:true})); document.querySelector('[data-nav=apps]').click(); return true; })()");
   await waitFor("!document.querySelector('#view-apps')?.hidden && document.querySelectorAll('#apps-grid > a.app-card').length === 8", 'Personal OS apps view');
   console.log('PASS integration filters/search distinguish workspace tools from app-side connections');
@@ -200,6 +218,16 @@ try {
   await waitFor("JSON.parse(localStorage.getItem('personal-os.suite-data.v1') || '{}').notes?.length === 1 && document.querySelector('#notes-list .note-card h3')?.textContent === 'E2E product principle'", 'Personal OS note create and persistence');
   await evaluate("document.querySelector('#notes-list button[data-action=note-pin]').click(); true");
   await waitFor("JSON.parse(localStorage.getItem('personal-os.suite-data.v1') || '{}').notes?.[0]?.pinned === true", 'Personal OS pin note');
+  await evaluate("document.querySelector('[data-nav=overview]').click(); true");
+  await evaluate("(() => { const input=document.querySelector('#global-search'); input.value='E2E product principle'; input.dispatchEvent(new Event('input',{bubbles:true})); return true; })()");
+  await waitFor("!document.querySelector('#global-search-results')?.hidden && [...document.querySelectorAll('#global-search-results .quick-search-result')].some(item => item.textContent.includes('E2E product principle'))", 'cross-app search finds a saved note');
+  await evaluate("document.querySelector('#global-search-results .quick-search-result').click(); true");
+  await waitFor("!document.querySelector('#view-notes')?.hidden && document.activeElement?.id === 'note-' + JSON.parse(localStorage.getItem('personal-os.suite-data.v1')).notes[0].id", 'search result navigates to and focuses the saved note');
+  await evaluate("document.querySelector('[data-nav=board]').click(); true");
+  await waitFor("!document.querySelector('#view-board')?.hidden", 'browser history navigation source view');
+  await evaluate("history.back(); true");
+  await waitFor("location.hash === '#notes' && !document.querySelector('#view-notes')?.hidden", 'browser back returns to previous app view');
+  console.log('PASS unified search opens the matching record and browser back restores the previous app view');
 
   await evaluate("document.querySelector('[data-nav=board]').click(); true");
   await waitFor("!document.querySelector('#view-board')?.hidden", 'Work Board view');
@@ -271,6 +299,12 @@ try {
   await waitFor("document.querySelector('#global-status')?.dataset.kind === 'error' && document.querySelector('#global-status')?.textContent.includes('Backup rejected')", 'tampered Personal OS backup rejection');
   assert.equal(await evaluate("localStorage.getItem('personal-os.suite-data.v1')"), beforeTamperedImport, 'A tampered backup must not overwrite current Personal OS data.');
   console.log('PASS tampered Personal OS archive is rejected without overwriting data');
+
+  const invalidDomainBackup = await evaluate("(async () => { const { createArchive } = await import('/packages/portable-archive/src/index.js'); const current = JSON.parse(localStorage.getItem('personal-os.suite-data.v1')); const invalid = { ...current, tasks: current.tasks.map(task => ({ ...task, projectId: 'missing-project' })) }; const archive = await createArchive({ appId: 'personal-os', schemaVersion: 1, data: invalid }); return JSON.stringify(archive); })()");
+  await uploadPersonalOsBackup(invalidDomainBackup, 'invalid-domain-personal-os.json');
+  await waitFor("document.querySelector('#global-status')?.dataset.kind === 'error' && document.querySelector('#global-status')?.textContent.includes('Backup rejected')", 'correctly checksummed but invalid Personal OS data rejection');
+  assert.equal(await evaluate("localStorage.getItem('personal-os.suite-data.v1')"), beforeTamperedImport, 'A domain-invalid archive must preserve the current Personal OS dataset.');
+  console.log('PASS valid-digest archive with invalid project references is rejected without data loss');
 
   await evaluate("document.querySelector('#clear-suite-data').click(); true");
   await waitFor("JSON.parse(localStorage.getItem('personal-os.suite-data.v1') || '{}').notes?.length === 0 && JSON.parse(localStorage.getItem('personal-os.suite-data.v1') || '{}').tasks?.length === 0", 'Personal OS clear app data');

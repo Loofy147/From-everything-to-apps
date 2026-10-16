@@ -1,4 +1,4 @@
-import { bootPersonalApps } from './apps.js';
+import { bootPersonalApps, getPersonalAppsSnapshot } from './apps.js';
 
 const SHORTCUTS_KEY = 'personal-os.shortcuts.v1';
 const THEME_KEY = 'personal-os.theme.v1';
@@ -114,11 +114,23 @@ function setTheme(theme) {
 }
 
 function searchable(value) {
-  return [value.name, value.category, value.description, ...(value.tags || []), value.license, value.kind].filter(Boolean).join(' ').toLocaleLowerCase();
+  return [value.name, value.category, value.description, value.summary, value.recommendation, value.role, value.evidence, value.url, ...(value.tags || []), value.license, value.kind].filter(Boolean).join(' ').toLocaleLowerCase();
 }
 
 function matchesQuery(value) {
   return !globalQuery || searchable(value).includes(globalQuery);
+}
+
+function matchRank(value, query = globalQuery) {
+  const q = query.trim().toLocaleLowerCase();
+  if (!q) return 0;
+  const name = String(value?.name || value?.title || '').toLocaleLowerCase();
+  if (name === q) return 0;
+  if (name.startsWith(q)) return 1;
+  if (name.includes(q)) return 2;
+  const category = String(value?.category || '').toLocaleLowerCase();
+  if (category.includes(q)) return 3;
+  return 4;
 }
 
 function appStatusClass(status) {
@@ -225,7 +237,7 @@ function createIntegrationCard(item) {
 
 function renderBuiltInApps(host, apps, limit = Infinity) {
   host.replaceChildren();
-  const filtered = apps.filter(matchesQuery).slice(0, limit);
+  const filtered = apps.filter(matchesQuery).sort((a, b) => matchRank(a) - matchRank(b)).slice(0, limit);
   filtered.forEach((app) => host.append(createAppCard(app)));
   return filtered.length;
 }
@@ -241,7 +253,7 @@ function renderAppView() {
     if (appFilter === 'ready' && item.kind !== 'built-in') return false;
     if (appFilter === 'shortcuts' && item.kind !== 'shortcut') return false;
     return matchesQuery(item);
-  });
+  }).sort((a, b) => matchRank(a) - matchRank(b));
   filtered.forEach((item) => {
     if (item.kind === 'shortcut') host.append(createAppCard(item, { removable: true }));
     else host.append(createAppCard(item));
@@ -263,7 +275,7 @@ function renderIntegrationView() {
     if (integrationFilter === 'open-source' && !item.kind.includes('open-source')) return false;
     if (integrationFilter === 'self-hosted' && !item.kind.includes('self-hosted')) return false;
     return matchesQuery(item);
-  });
+  }).sort((a, b) => matchRank(a) - matchRank(b));
   filtered.forEach((item) => host.append(createIntegrationCard(item)));
   $('#integration-result-count').textContent = filtered.length + (filtered.length === 1 ? ' integration' : ' integrations');
   $('#integrations-empty').hidden = filtered.length > 0;
@@ -271,7 +283,203 @@ function renderIntegrationView() {
   $('#metric-integrations').textContent = String(registry.integrations.length);
 }
 
+
+function displayDate(value) {
+  if (!value) return 'No due date';
+  const normalized = value.length === 10 ? value + 'T12:00:00' : value;
+  const date = new Date(normalized);
+  return Number.isNaN(date.valueOf()) ? value : date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
+function renderDashboardList(host, items, emptyText, view, getTitle, getMeta, getSelector) {
+  host.replaceChildren();
+  if (!items.length) {
+    host.append(node('p', 'dashboard-empty', emptyText));
+    return;
+  }
+  for (const item of items) {
+    const entry = node('button', 'dashboard-row');
+    entry.type = 'button';
+    entry.append(
+      node('span', 'dashboard-row-main', getTitle(item)),
+      node('span', 'dashboard-row-meta', getMeta(item)),
+      node('span', 'dashboard-row-arrow', '↗')
+    );
+    entry.addEventListener('click', () => {
+      activateView(view);
+      requestAnimationFrame(() => {
+        const target = document.querySelector(getSelector(item));
+        if (target) {
+          target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          target.setAttribute('tabindex', '-1');
+          target.focus({ preventScroll: true });
+        }
+      });
+    });
+    host.append(entry);
+  }
+}
+
+
+function quickSearchEntries(query) {
+  const q = query.toLocaleLowerCase();
+  const entries = [];
+  for (const app of registry.apps) {
+    if (searchable(app).toLocaleLowerCase().includes(q)) {
+      entries.push({ title: app.name, subtitle: app.category + ' · App', kind: 'app', view: app.href.startsWith('#') ? app.href.slice(1) : null, href: app.href, queryKey: app.name });
+    }
+  }
+  for (const shortcut of shortcuts) {
+    if (searchable(shortcut).includes(q)) entries.push({ title: shortcut.name, subtitle: shortcut.category + ' · Shortcut', kind: 'shortcut', href: shortcut.url });
+  }
+  for (const integration of registry.integrations) {
+    if (searchable(integration).includes(q)) entries.push({ title: integration.name, subtitle: integration.category + ' · Integration', kind: 'integration', view: 'integrations', queryKey: integration.name });
+  }
+  for (const module of registry.modules) {
+    if ([module.name, module.role, module.evidence].join(' ').toLocaleLowerCase().includes(q)) {
+      entries.push({ title: module.name, subtitle: 'Shared capability', kind: 'module', view: 'architecture', queryKey: module.name });
+    }
+  }
+
+  const data = getPersonalAppsSnapshot();
+  const addRecords = (items, view, kind, getTitle, getSummary, getTarget) => {
+    for (const item of items) {
+      const text = [getTitle(item), getSummary(item), ...(item.tags || [])].filter(Boolean).join(' ').toLocaleLowerCase();
+      if (text.includes(q)) entries.push({ title: getTitle(item), subtitle: kind + ' · ' + getSummary(item), kind: 'record', view, target: getTarget(item), queryKey: getTitle(item) });
+    }
+  };
+  addRecords(data.notes, 'notes', 'Note', (item) => item.title, (item) => item.pinned ? 'Pinned note' : 'Personal note', (item) => '#note-' + item.id);
+  addRecords(data.tasks, 'board', 'Task', (item) => item.title, (item) => item.status === 'todo' ? 'Next action' : item.status === 'doing' ? 'In progress' : 'Completed task', (item) => '#task-' + item.id);
+  addRecords(data.projects, 'board', 'Project', (item) => item.name, () => 'Workstream', (item) => '#project-' + item.id);
+  addRecords(data.research, 'research', 'Research', (item) => item.title, (item) => item.status === 'to-review' ? 'To review' : item.status === 'reviewed' ? 'Reviewed' : 'Actionable', (item) => '#research-' + item.id);
+  addRecords(data.documents, 'files', 'Document', (item) => item.title, (item) => item.format.toUpperCase() + ' document', (item) => '#document-' + item.id);
+  addRecords(data.media, 'media', 'Media', (item) => item.title, (item) => item.stage + ' · creative brief', (item) => '#media-' + item.id);
+  return entries.sort((a, b) => matchRank(a, query) - matchRank(b, query)).slice(0, 10);
+}
+
+function navigateQuickResult(result) {
+  const input = $('#global-search');
+  const host = $('#global-search-results');
+  host.hidden = true;
+  input.setAttribute('aria-expanded', 'false');
+  if (result.kind === 'shortcut') {
+    window.location.assign(result.href);
+    return;
+  }
+  if (result.kind === 'app' && !result.view) {
+    window.location.assign(result.href);
+    return;
+  }
+  if (result.kind === 'record') {
+    activateView(result.view);
+    globalQuery = '';
+    input.value = '';
+    renderAll();
+    requestAnimationFrame(() => {
+      const target = document.querySelector(result.target);
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        target.setAttribute('tabindex', '-1');
+        target.focus({ preventScroll: true });
+      }
+    });
+    return;
+  }
+  activateView(result.view || 'overview');
+  input.value = result.kind === 'integration' ? result.queryKey : '';
+  applySearch(input.value);
+  host.hidden = true;
+  input.setAttribute('aria-expanded', 'false');
+  input.focus();
+}
+
+function renderQuickSearch() {
+  const input = $('#global-search');
+  const host = $('#global-search-results');
+  const query = input.value.trim();
+  if (!query) {
+    host.replaceChildren();
+    host.hidden = true;
+    input.setAttribute('aria-expanded', 'false');
+    input.removeAttribute('aria-activedescendant');
+    return;
+  }
+  const results = quickSearchEntries(query);
+  host.replaceChildren();
+  if (!results.length) {
+    host.append(node('p', 'quick-search-empty', 'No matching apps or saved items.'));
+  } else {
+    results.forEach((result, index) => {
+      const item = node('button', 'quick-search-result');
+      item.type = 'button';
+      item.id = 'quick-search-result-' + index;
+      item.setAttribute('role', 'option');
+      item.setAttribute('aria-selected', 'false');
+      item.append(
+        node('span', 'quick-search-kind', result.kind === 'record' ? result.subtitle.split(' · ')[0] : result.kind),
+        node('span', 'quick-search-copy', result.title),
+        node('span', 'quick-search-subtitle', result.subtitle)
+      );
+      item.addEventListener('click', () => navigateQuickResult(result));
+      host.append(item);
+    });
+  }
+  host.hidden = false;
+  input.setAttribute('aria-expanded', 'true');
+  input.removeAttribute('aria-activedescendant');
+}
+
+function renderPersonalDashboard() {
+  const data = getPersonalAppsSnapshot();
+  const current = new Date();
+  const today = [current.getFullYear(), String(current.getMonth() + 1).padStart(2, '0'), String(current.getDate()).padStart(2, '0')].join('-');
+  const openTasks = data.tasks.filter((task) => task.status !== 'done');
+  const dueTasks = openTasks.filter((task) => task.dueDate && task.dueDate <= today);
+  const reviewItems = data.research.filter((item) => item.status === 'to-review');
+  const activeMedia = data.media.filter((item) => item.stage !== 'done');
+
+  $('#dashboard-open-tasks').textContent = String(openTasks.length);
+  $('#dashboard-due-tasks').textContent = String(dueTasks.length);
+  $('#dashboard-review-count').textContent = String(reviewItems.length);
+  $('#dashboard-media-active').textContent = String(activeMedia.length);
+  $('#dashboard-storage-notice').hidden = data.storageHealthy;
+
+  const nextTasks = [...openTasks].sort((a, b) => {
+    const aDue = a.dueDate || '9999-12-31';
+    const bDue = b.dueDate || '9999-12-31';
+    return aDue.localeCompare(bDue) || Date.parse(b.updatedAt) - Date.parse(a.updatedAt);
+  }).slice(0, 5);
+  renderDashboardList(
+    $('#dashboard-next-list'), nextTasks, 'No open tasks. Add a next action to make progress visible.', 'board',
+    (task) => task.title,
+    (task) => [task.priority === 'high' ? 'High priority' : task.priority === 'low' ? 'Low priority' : 'Normal priority', task.dueDate ? displayDate(task.dueDate) : 'No due date'].join(' · '),
+    (task) => '#task-' + task.id
+  );
+  const recentNotes = [...data.notes].sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt)).slice(0, 4);
+  renderDashboardList(
+    $('#dashboard-notes-list'), recentNotes, 'No notes yet. Save a reusable idea or decision.', 'notes',
+    (item) => item.title,
+    (item) => (item.pinned ? 'Pinned · ' : '') + 'Updated ' + displayDate(item.updatedAt.slice(0, 10)),
+    (item) => '#note-' + item.id
+  );
+  const researchQueue = [...reviewItems].sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt)).slice(0, 4);
+  renderDashboardList(
+    $('#dashboard-research-list'), researchQueue, 'Research queue clear. Add a source when you investigate something.', 'research',
+    (item) => item.title,
+    (item) => item.url ? new URL(item.url).hostname : 'No source URL',
+    (item) => '#research-' + item.id
+  );
+  const mediaQueue = [...activeMedia].sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt)).slice(0, 4);
+  renderDashboardList(
+    $('#dashboard-media-list'), mediaQueue, 'No active creative projects. Add a brief when work starts.', 'media',
+    (item) => item.title,
+    (item) => item.stage.charAt(0).toUpperCase() + item.stage.slice(1),
+    (item) => '#media-' + item.id
+  );
+}
+
 function renderOverview() {
+  renderPersonalDashboard();
   renderBuiltInApps($('#overview-app-grid'), registry.apps, 3);
   const host = $('#overview-module-grid');
   host.replaceChildren();
@@ -306,7 +514,7 @@ function activateView(view, updateHash = true) {
   $('#page-crumb').textContent = viewTitles[view];
   document.title = viewTitles[view] + ' — Personal OS';
   if (updateHash && window.location.hash !== '#' + view) {
-    history.replaceState(null, '', '#' + view);
+    history.pushState({ view }, '', '#' + view);
   }
   globalQuery = $('#global-search').value.trim().toLocaleLowerCase();
   renderAll();
@@ -388,11 +596,42 @@ function removeShortcut(id) {
 
 function bindEvents() {
   $$('[data-nav]').forEach((button) => button.addEventListener('click', () => activateView(button.dataset.nav)));
-  $('#global-search').addEventListener('input', (event) => applySearch(event.currentTarget.value));
+  const quickCreateFocus = { notes: '#note-title', board: '#task-title', research: '#research-title-input', media: '#media-project-title' };
+  $$('[data-quick-create]').forEach((button) => button.addEventListener('click', () => {
+    const view = button.dataset.quickCreate;
+    activateView(view);
+    requestAnimationFrame(() => $(quickCreateFocus[view])?.focus());
+  }));
+  $('#global-search').addEventListener('input', (event) => { applySearch(event.currentTarget.value); renderQuickSearch(); });
+  $('#global-search-results').addEventListener('keydown', (event) => {
+    const options = $$('.quick-search-result', $('#global-search-results'));
+    const index = options.indexOf(document.activeElement);
+    if (event.key === 'ArrowDown' && options.length) {
+      event.preventDefault();
+      options[Math.min(index + 1, options.length - 1)].focus();
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      if (index <= 0) $('#global-search').focus();
+      else options[index - 1].focus();
+    } else if (event.key === 'Escape') {
+      $('#global-search-results').hidden = true;
+      $('#global-search').setAttribute('aria-expanded', 'false');
+      $('#global-search').focus();
+    }
+  });
   $('#global-search').addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && event.currentTarget.value) {
+    if (event.key === 'ArrowDown' && !$('#global-search-results').hidden) {
+      const first = $('#global-search-results .quick-search-result');
+      if (first) { event.preventDefault(); first.focus(); }
+    }
+    if (event.key === 'Escape' && !$('#global-search-results').hidden) {
+      $('#global-search-results').hidden = true;
+      event.currentTarget.setAttribute('aria-expanded', 'false');
+      event.currentTarget.focus();
+    } else if (event.key === 'Escape' && event.currentTarget.value) {
       event.currentTarget.value = '';
       applySearch('');
+      renderQuickSearch();
     }
   });
   document.addEventListener('keydown', (event) => {
@@ -435,6 +674,13 @@ function bindEvents() {
     if (event.target === event.currentTarget) closeShortcutDialog();
   });
   window.addEventListener('hashchange', () => activateView(window.location.hash.slice(1), false));
+  window.addEventListener('popstate', () => activateView(window.location.hash.slice(1) || 'overview', false));
+  document.addEventListener('click', (event) => {
+    if (!event.target.closest('.search-wrap')) {
+      $('#global-search-results').hidden = true;
+      $('#global-search').setAttribute('aria-expanded', 'false');
+    }
+  });
 }
 
 async function loadRegistry() {
@@ -470,6 +716,7 @@ async function boot() {
     renderAll();
     const requestedView = window.location.hash.slice(1) || 'overview';
     activateView(requestedView, false);
+    renderQuickSearch();
     if (!shortcutStorageHealthy) $('#add-shortcut').disabled = true;
   } catch (error) {
     registryError = error.message || 'Unknown registry error';
