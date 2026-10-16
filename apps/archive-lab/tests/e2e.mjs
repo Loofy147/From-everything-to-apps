@@ -241,7 +241,18 @@ try {
   process.exitCode = 1;
 } finally {
   try { socket?.close(); } catch {}
-  try { browser?.kill('SIGTERM'); } catch {}
-  try { server?.close(); } catch {}
-  await rm(temp, { recursive: true, force: true });
+  if (browser && browser.exitCode === null) {
+    const exited = new Promise((resolve) => browser.once('exit', resolve));
+    browser.kill('SIGTERM');
+    await Promise.race([exited, wait(4000)]);
+    if (browser.exitCode === null) {
+      const killed = new Promise((resolve) => browser.once('exit', resolve));
+      browser.kill('SIGKILL');
+      await Promise.race([killed, wait(2000)]);
+    }
+  }
+  if (server?.listening) {
+    await new Promise((resolve) => server.close(resolve));
+  }
+  await rm(temp, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 }
