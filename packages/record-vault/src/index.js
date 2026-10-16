@@ -266,6 +266,12 @@ export class RecordVault {
     this.#commit(this.#state.records.filter((item) => item.id !== id));
   }
 
+  clearRecords() {
+    if (this.#state.records.length === 0) return false;
+    this.#commit([]);
+    return true;
+  }
+
   async exportArchive({ metadata = {} } = {}) {
     return createArchive({
       appId: RECORD_VAULT_APP_ID,
