@@ -33,7 +33,7 @@ Do not open the file directly via `file://`. The browser needs the module/import
 - Estimates can be increased after recorded payments, but cannot be removed or lowered below the cumulative recorded amount. This keeps the prototype’s own payment-total rule consistent when work scope changes.
 - Payment entries are user-reported notes. The app does not process, receive, settle or verify payments.
 - Estimated amounts are not official invoices or quotes, and the app does not calculate tax, comply with accounting requirements or issue regulated documents.
-- This prototype has no multi-user access control, encryption, remote backup, or audit-proof history. Chromium CI exercises restoration from a downloaded backup after clearing all origin storage; this is automated recovery evidence for Khidma Desk, not confirmation of manual recovery in other browsers. Do not use it for sensitive or irreplaceable records.
+- This prototype has no multi-user access control, encryption, remote backup, or audit-proof history. Chromium CI exercises restoration from a downloaded backup after clearing all application localStorage; this is automated recovery evidence for Khidma Desk, not confirmation of manual recovery in other browsers. Do not use it for sensitive or irreplaceable records.
 
 ## Tests
 
