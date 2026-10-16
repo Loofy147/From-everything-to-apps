@@ -1,3 +1,4 @@
+// Chromium browser acceptance suite for Archive Lab and Khidma Desk.
 import assert from 'node:assert/strict';
 import { spawn, spawnSync } from 'node:child_process';
 import { createServer } from 'node:http';
@@ -6,7 +7,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const appPath = '/apps/archive-lab/';
 const mime = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json; charset=utf-8' };
 
@@ -180,15 +181,94 @@ try {
   await cdp.send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true }, session);
   const dimensions = await evaluate("({width:window.innerWidth,scrollWidth:document.documentElement.scrollWidth})");
   assert.ok(dimensions.scrollWidth <= dimensions.width, 'Mobile layout overflow: viewport ' + dimensions.width + ', document ' + dimensions.scrollWidth);
-  console.log('PASS mobile layout at 390px has no horizontal overflow');
-  console.log('Browser acceptance suite passed: boot, create, reload, edit, export, clear, restore, tamper rejection, mobile layout.');
+  console.log('PASS Archive Lab mobile layout at 390px has no horizontal overflow');
+
+  // Exercise the first domain application through the same real browser session.
+  const khidmaUrl = new URL('/apps/khidma-desk/', web.url).toString();
+  await cdp.send('Page.navigate', { url: khidmaUrl }, session);
+  await waitFor("document.readyState === 'complete' && document.querySelector('#status')?.dataset.ready === 'true'", 'Khidma Desk boot');
+  const frenchDimensions = await evaluate("({lang:document.documentElement.lang,dir:document.documentElement.dir,width:window.innerWidth,scrollWidth:document.documentElement.scrollWidth})");
+  assert.equal(frenchDimensions.lang, 'fr');
+  assert.equal(frenchDimensions.dir, 'ltr');
+  assert.ok(frenchDimensions.scrollWidth <= frenchDimensions.width, 'French mobile layout overflow: viewport ' + frenchDimensions.width + ', document ' + frenchDimensions.scrollWidth);
+  console.log('PASS Khidma Desk boots locally with a non-overflowing French LTR layout');
+
+  await evaluate("(() => { document.querySelector('#customer-name').value='Atelier Al Amal'; document.querySelector('#customer-phone').value='+213 555 123 456'; document.querySelector('#customer-address').value='Blida'; document.querySelector('#customer-form').requestSubmit(); return true; })()");
+  await waitFor("JSON.parse(localStorage.getItem('khidma-desk.state.v1') || '{}').customers?.some(c => c.name === 'Atelier Al Amal')", 'Khidma customer save');
+  await evaluate("(() => { const select=document.querySelector('#job-customer'); select.value=select.options[1].value; document.querySelector('#job-title').value='Repair air conditioner'; document.querySelector('#job-description').value='Check replacement part'; document.querySelector('#job-form').requestSubmit(); return true; })()");
+  await waitFor("JSON.parse(localStorage.getItem('khidma-desk.state.v1') || '{}').jobs?.some(j => j.title === 'Repair air conditioner' && j.quotedAmountDzd === null && j.status === 'requested')", 'Khidma job creation without estimate');
+  await evaluate("(() => { document.querySelector('.job-card button[data-action=estimate]').click(); document.querySelector('#estimate-amount').value='12000'; document.querySelector('#estimate-form').requestSubmit(); return true; })()");
+  await waitFor("JSON.parse(localStorage.getItem('khidma-desk.state.v1') || '{}').jobs?.some(j => j.title === 'Repair air conditioner' && j.quotedAmountDzd === 12000 && j.status === 'requested')", 'Khidma estimate added after job creation');
+  await evaluate("(() => { const select=document.querySelector('.job-card select'); select.value='quoted'; select.dispatchEvent(new Event('change',{bubbles:true})); return true; })()");
+  await waitFor("JSON.parse(localStorage.getItem('khidma-desk.state.v1') || '{}').jobs?.some(j => j.status === 'quoted')", 'Khidma quoted status');
+  console.log('PASS customer/job creation and estimate entry after creation');
+
+  await evaluate("(() => { const select=document.querySelector('.job-card select'); select.value='scheduled'; select.dispatchEvent(new Event('change',{bubbles:true})); return true; })()");
+  await waitFor("JSON.parse(localStorage.getItem('khidma-desk.state.v1') || '{}').jobs?.some(j => j.status === 'scheduled')", 'Khidma status transition');
+  await evaluate("(() => { document.querySelector('.job-card button[data-action=payment]').click(); document.querySelector('#payment-amount').value='3000'; document.querySelector('#payment-method').value='cash'; document.querySelector('#payment-reference').value='E2E receipt'; document.querySelector('#payment-form').requestSubmit(); return true; })()");
+  await waitFor("JSON.parse(localStorage.getItem('khidma-desk.state.v1') || '{}').jobs?.some(j => j.payments?.length === 1 && j.payments[0].amountDzd === 3000)", 'Khidma manual payment record');
+  await evaluate("(() => { document.querySelector('.job-card button[data-action=estimate]').click(); document.querySelector('#estimate-amount').value='15000'; document.querySelector('#estimate-form').requestSubmit(); return true; })()");
+  await waitFor("JSON.parse(localStorage.getItem('khidma-desk.state.v1') || '{}').jobs?.some(j => j.quotedAmountDzd === 15000 && j.payments?.length === 1 && j.payments[0].amountDzd === 3000)", 'Khidma estimate update after deposit');
+  await cdp.send('Page.reload', {}, session);
+  await waitFor("document.querySelector('#status')?.dataset.ready === 'true'", 'Khidma reload');
+  await waitFor("document.querySelector('.job-card h3')?.textContent === 'Repair air conditioner' && document.querySelector('.payment-entry') !== null && JSON.parse(localStorage.getItem('khidma-desk.state.v1') || '{}').jobs?.some(j => j.quotedAmountDzd === 15000)", 'Khidma job, payment and updated estimate restore after reload');
+  console.log('PASS status transition, payment, estimate update after deposit and reload persistence');
+
+  await evaluate("document.querySelector('#export').click(); true");
+  const khidmaStateBeforeExport = await evaluate("localStorage.getItem('khidma-desk.state.v1')");
+  const khidmaArchivePath = await until(async () => {
+    const names = await readdir(downloads);
+    const completed = names.filter((name) => name.startsWith('khidma-desk-') && name.endsWith('.json'));
+    if (!completed.length || names.some((name) => name.endsWith('.crdownload'))) return null;
+    return path.join(downloads, completed[0]);
+  }, 'Khidma archive download');
+  const khidmaArchiveText = await readFile(khidmaArchivePath, 'utf8');
+  const khidmaArchive = JSON.parse(khidmaArchiveText);
+  assert.equal(khidmaArchive.appId, 'khidma-desk');
+  assert.equal(khidmaArchive.data.customers[0].name, 'Atelier Al Amal');
+  assert.equal(khidmaArchive.data.jobs[0].payments[0].amountDzd, 3000);
+  await evaluate("document.querySelector('#clear').click(); true");
+  await waitFor("JSON.parse(localStorage.getItem('khidma-desk.state.v1') || '{}').customers?.length === 0 && JSON.parse(localStorage.getItem('khidma-desk.state.v1') || '{}').jobs?.length === 0", 'Khidma clear');
+  const khidmaImportEvent = "(async () => { const input=document.querySelector('#import-file'); const dt=new DataTransfer(); dt.items.add(new File([" + JSON.stringify(khidmaArchiveText) + "], 'khidma-backup.json', {type:'application/json'})); input.files=dt.files; input.dispatchEvent(new Event('change',{bubbles:true})); return true; })()";
+  await evaluate(khidmaImportEvent);
+  await waitFor("JSON.parse(localStorage.getItem('khidma-desk.state.v1') || '{}').jobs?.some(j => j.title === 'Repair air conditioner' && j.payments?.length === 1)", 'Khidma restore');
+  assert.equal(await evaluate("localStorage.getItem('khidma-desk.state.v1')"), khidmaStateBeforeExport, 'All customer, job, status and payment fields must round-trip without change.');
+  console.log('PASS Khidma export, clear and exact full-state restore');
+
+  const invalidKhidmaArchive = JSON.stringify({ ...khidmaArchive, data: { ...khidmaArchive.data, jobs: khidmaArchive.data.jobs.map((job) => ({ ...job, title: 'Tampered job' })) } });
+  const khidmaStateBeforeInvalid = await evaluate("localStorage.getItem('khidma-desk.state.v1')");
+  const invalidKhidmaEvent = "(async () => { const input=document.querySelector('#import-file'); const dt=new DataTransfer(); dt.items.add(new File([" + JSON.stringify(invalidKhidmaArchive) + "], 'invalid-khidma-backup.json', {type:'application/json'})); input.files=dt.files; input.dispatchEvent(new Event('change',{bubbles:true})); return true; })()";
+  await evaluate(invalidKhidmaEvent);
+  await waitFor("document.querySelector('#status')?.dataset.kind === 'error'", 'Khidma invalid archive rejection');
+  assert.equal(await evaluate("localStorage.getItem('khidma-desk.state.v1')"), khidmaStateBeforeInvalid);
+  assert.equal(await evaluate("document.querySelector('.job-card h3')?.textContent"), 'Repair air conditioner');
+  console.log('PASS Khidma tampered backup rejection preserves customer, job and payment');
+
+  await evaluate("(() => { const select=document.querySelector('#language-select'); select.value='ar'; select.dispatchEvent(new Event('change',{bubbles:true})); return true; })()");
+  await waitFor("document.documentElement.lang === 'ar' && document.documentElement.dir === 'rtl'", 'Arabic RTL locale');
+  const arabicDimensions = await evaluate("({width:window.innerWidth,scrollWidth:document.documentElement.scrollWidth,dir:document.documentElement.dir})");
+  assert.equal(arabicDimensions.dir, 'rtl');
+  assert.ok(arabicDimensions.scrollWidth <= arabicDimensions.width, 'Arabic mobile layout overflow: viewport ' + arabicDimensions.width + ', document ' + arabicDimensions.scrollWidth);
+  console.log('PASS Arabic RTL rendering has no horizontal overflow at 390px');
+  console.log('Browser acceptance passed for Archive Lab and Khidma Desk workflows.');
 } catch (error) {
   console.error(error);
   if (browserErrors.length) console.error('Chrome stderr: ' + browserErrors.join('').slice(-4000));
   process.exitCode = 1;
 } finally {
   try { socket?.close(); } catch {}
-  try { browser?.kill('SIGTERM'); } catch {}
-  try { server?.close(); } catch {}
-  await rm(temp, { recursive: true, force: true });
+  if (browser && browser.exitCode === null) {
+    const exited = new Promise((resolve) => browser.once('exit', resolve));
+    browser.kill('SIGTERM');
+    await Promise.race([exited, wait(4000)]);
+    if (browser.exitCode === null) {
+      const killed = new Promise((resolve) => browser.once('exit', resolve));
+      browser.kill('SIGKILL');
+      await Promise.race([killed, wait(2000)]);
+    }
+  }
+  if (server?.listening) {
+    await new Promise((resolve) => server.close(resolve));
+  }
+  await rm(temp, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 }
