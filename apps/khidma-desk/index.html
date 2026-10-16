@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="fr" dir="ltr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="Local-first service job tracking with Arabic and French UI.">
+  <title>Khidma Desk — Service workspace</title>
+  <link rel="stylesheet" href="./styles.css">
+  <script type="importmap">
+    {
+      "imports": {
+        "@from-everything-to-apps/portable-archive": "../../packages/portable-archive/src/index.js",
+        "@from-everything-to-apps/khidma-core": "../../packages/khidma-core/src/index.js"
+      }
+    }
+  </script>
+  <script type="module" src="./main.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="./"><span class="brand-mark" aria-hidden="true">K</span><span>Khidma Desk</span></a>
+    <div class="top-actions">
+      <label class="language-label" for="language-select"><span id="language-caption">Language</span>
+        <select id="language-select" aria-label="Language">
+          <option value="fr" selected>Français</option>
+          <option value="ar">العربية</option>
+        </select>
+      </label>
+      <button id="export" class="button secondary" type="button">Export backup</button>
+      <label class="button secondary file-button" for="import-file">Import backup</label>
+      <input id="import-file" type="file" accept=".json,application/json" hidden>
+    </div>
+  </header>
+
+  <main class="page">
+    <section class="hero">
+      <p id="eyebrow" class="eyebrow">SERVICE OPERATIONS · LOCAL-FIRST</p>
+      <h1 id="hero-title">Customer requests, jobs and payment records in one place.</h1>
+      <p id="hero-copy" class="hero-copy">A focused workspace for independent service providers. Start with one customer and one job, then keep the job status and manually recorded payments together.</p>
+      <div class="notice" role="note">
+        <strong id="privacy-title">Local prototype</strong>
+        <span id="privacy-copy">Data stays in this browser and is not encrypted. Export a backup. Payment records are entered manually and are not verified by this app; this is not accounting or a legally compliant invoice system.</span>
+      </div>
+    </section>
+
+    <p id="status" role="status" aria-live="polite" class="status">Ouverture des données locales…</p>
+
+    <section class="summary-grid" aria-label="Overview">
+      <article class="summary-card"><span id="customers-summary-label">Customers</span><strong id="customers-count">0</strong></article>
+      <article class="summary-card"><span id="jobs-summary-label">Open jobs</span><strong id="jobs-count">0</strong></article>
+      <article class="summary-card"><span id="payments-summary-label">Recorded payments</span><strong id="payments-total">0 DZD</strong></article>
+    </section>
+
+    <section class="forms-grid">
+      <form id="customer-form" class="panel">
+        <div class="panel-title"><span class="step-number">01</span><div><p class="eyebrow" id="customer-eyebrow">CUSTOMER</p><h2 id="customer-heading">Add a customer</h2></div></div>
+        <label for="customer-name" id="customer-name-label">Customer name *</label>
+        <input id="customer-name" name="name" required maxlength="120" autocomplete="name" placeholder="Name or business">
+        <label for="customer-phone" id="customer-phone-label">Phone (optional)</label>
+        <input id="customer-phone" name="phone" maxlength="40" inputmode="tel" autocomplete="tel" placeholder="+213 …">
+        <label for="customer-address" id="customer-address-label">Address (optional)</label>
+        <input id="customer-address" name="address" maxlength="400" autocomplete="street-address">
+        <label for="customer-notes" id="customer-notes-label">Notes (optional)</label>
+        <textarea id="customer-notes" name="notes" maxlength="1000" rows="2"></textarea>
+        <button class="button primary" id="save-customer" type="submit">Save customer</button>
+      </form>
+
+      <form id="job-form" class="panel">
+        <div class="panel-title"><span class="step-number">02</span><div><p class="eyebrow" id="job-eyebrow">SERVICE JOB</p><h2 id="job-heading">Create a job</h2></div></div>
+        <label for="job-customer" id="job-customer-label">Customer *</label>
+        <select id="job-customer" name="customerId" required><option value="">Add a customer first</option></select>
+        <label for="job-title" id="job-title-label">Job title *</label>
+        <input id="job-title" name="title" required maxlength="150" placeholder="Repair, installation, maintenance…">
+        <label for="job-description" id="job-description-label">Description (optional)</label>
+        <textarea id="job-description" name="description" maxlength="3000" rows="3"></textarea>
+        <label for="job-appointment" id="job-appointment-label">Appointment (optional)</label>
+        <input id="job-appointment" name="appointmentAt" type="datetime-local">
+        <label for="job-estimate" id="job-estimate-label">Estimated amount (DZD, optional)</label>
+        <input id="job-estimate" name="quotedAmountDzd" type="number" min="0" max="1000000000000" step="1" inputmode="numeric" placeholder="12000">
+        <button class="button primary" id="save-job" type="submit">Create job</button>
+      </form>
+    </section>
+
+    <section class="lower-grid">
+      <section class="panel customers-panel" aria-labelledby="customers-heading">
+        <div class="section-heading"><div><p class="eyebrow" id="customers-list-eyebrow">CUSTOMER BOOK</p><h2 id="customers-heading">Customers</h2></div><span id="customers-list-count" class="count">0</span></div>
+        <div id="customer-list" class="customer-list"><p class="empty" id="customer-empty">No customers yet.</p></div>
+      </section>
+      <section class="panel jobs-panel" aria-labelledby="jobs-heading">
+        <div class="section-heading"><div><p class="eyebrow" id="jobs-list-eyebrow">WORK QUEUE</p><h2 id="jobs-heading">Service jobs</h2></div><span id="jobs-list-count" class="count">0</span></div>
+        <div id="job-list" class="job-list"><p class="empty" id="job-empty">No jobs yet.</p></div>
+      </section>
+    </section>
+
+    <dialog id="payment-dialog" class="payment-dialog">
+      <form id="payment-form">
+        <div class="section-heading"><div><p class="eyebrow" id="payment-eyebrow">PAYMENT RECORD</p><h2 id="payment-heading">Record a payment</h2></div><button class="icon-button" id="close-payment" type="button" aria-label="Close">×</button></div>
+        <input id="payment-job-id" type="hidden">
+        <label for="payment-amount" id="payment-amount-label">Amount (DZD) *</label>
+        <input id="payment-amount" name="amountDzd" type="number" min="1" max="1000000000000" step="1" required inputmode="numeric">
+        <label for="payment-method" id="payment-method-label">Method *</label>
+        <select id="payment-method" name="method" required>
+          <option value="cash">Cash</option>
+          <option value="bank_transfer">Bank transfer</option>
+          <option value="cib">CIB</option>
+          <option value="edahabia">Edahabia</option>
+          <option value="other">Other</option>
+        </select>
+        <label for="payment-reference" id="payment-reference-label">Reference (optional)</label>
+        <input id="payment-reference" name="reference" maxlength="160">
+        <p id="payment-warning" class="field-note">This is a manual note, not payment processing or verification.</p>
+        <div class="dialog-actions"><button class="button secondary" id="cancel-payment" type="button">Cancel</button><button class="button primary" id="save-payment" type="submit">Save payment record</button></div>
+      </form>
+    </dialog>
+
+    <details class="limits">
+      <summary id="limits-heading">Prototype limits and data handling</summary>
+      <p id="limits-copy">This prototype uses unencrypted browser localStorage. Keep separate backup copies. Clearing browser site data may erase records. No information is sent to a server. Recorded payments are self-reported, and estimates are not legal or tax-compliant documents. Do not enter sensitive or irreplaceable data.</p>
+    </details>
+  </main>
+  <footer id="footer">Khidma Desk v0.1 · Local-first prototype · Not a payment processor</footer>
+</body>
+</html>
