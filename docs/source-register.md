@@ -36,3 +36,12 @@ Before reuse, re-fetch current license and notices, compare blob SHAs, inspect c
 | `tests/browser/e2e.mjs` | Shared headless Chromium acceptance for Archive Lab and Khidma Desk | First-party test harness using Node.js built-ins and a Chrome DevTools Protocol session; no test-runner dependency. | Executed by `npm run check` in GitHub Actions. |
 
 All claims above are limited to recorded test and commit evidence; successful automated tests do not establish production readiness.
+
+
+## Personal OS Apps and integration-catalog screen
+
+- Local implementation: `apps/personal-os/index.html`, `main.js`, `styles.css`, and `registry.json`. These are first-party files; the integration rows are service metadata/links and do not bundle provider code.
+- Architecture decision: `docs/decisions/0004-personal-os-shell-and-provider-boundaries.md`.
+- License/feature shortlist: `docs/integrations/universal-capability-catalog.md`. It links upstream license pages reviewed on 2026-10-16 and distinguishes MIT/Apache/BSD/MPL/public-domain candidates from AGPL and source-available licenses.
+- No upstream third-party application source has been copied into the Personal OS shell. Source links are discovery/evaluation references only; they are not a blanket approval to reuse an entire application or its dependencies.
+- Evidence gate: shell navigation, search, shortcut save/reload/remove, URL validation, theme persistence and 390px overflow are covered by the new Chromium acceptance extension when the containing PR CI passes. OAuth, API calls, identity, cloud sync, multi-browser shortcuts and accessibility audit are outside this shell slice.

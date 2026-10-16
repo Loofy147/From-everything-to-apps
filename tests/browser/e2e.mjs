@@ -148,8 +148,54 @@ try {
     console.log("PASS " + label + " rejects the import without overwriting current data");
   }
 
+  const personalOsRoot = new URL('/', web.url).toString();
+  await cdp.send('Page.navigate', { url: personalOsRoot }, session);
+  await waitFor("location.pathname === '/apps/personal-os/' && document.querySelector('#overview-title')?.textContent.includes('One home')", 'Personal OS root redirect and boot');
+  await waitFor("document.querySelectorAll('#overview-app-grid .app-card').length === 2", 'Personal OS app registry');
+  const shellMetrics = await evaluate("({title:document.title,apps:document.querySelectorAll('#overview-app-grid .app-card').length,modules:document.querySelectorAll('#overview-module-grid .module-card').length,integrations:Number(document.querySelector('#metric-integrations')?.textContent),width:innerWidth,scrollWidth:document.documentElement.scrollWidth})");
+  assert.equal(shellMetrics.apps, 2);
+  assert.equal(shellMetrics.modules, 3);
+  assert.ok(shellMetrics.integrations >= 15, 'Expected a useful integration and license catalog.');
+  assert.ok(shellMetrics.scrollWidth <= shellMetrics.width, 'Personal OS desktop layout has horizontal overflow.');
+  console.log('PASS Personal OS root entry, app registry, capability modules and integration catalog render');
+
+  await evaluate("document.querySelector('[data-nav=integrations]').click(); true");
+  await waitFor("!document.querySelector('#view-integrations')?.hidden && document.querySelectorAll('#integrations-grid .integration-card').length >= 15", 'Personal OS integrations view');
+  const workspaceConnectors = await evaluate("document.querySelectorAll('#integrations-grid .integration-status.workspace').length");
+  assert.ok(workspaceConnectors >= 5, 'Workspace-access labels should be present for connector tools.');
+  assert.ok(await evaluate("[...document.querySelectorAll('#integrations-grid .integration-foot span')].some(el => el.textContent.includes('Not connected to this app'))"), 'Workspace tool cards must state that the deployed app is not connected.');
+  await evaluate("(() => { const search=document.querySelector('#global-search'); search.value='supabase'; search.dispatchEvent(new Event('input',{bubbles:true})); return true; })()");
+  await waitFor("document.querySelectorAll('#integrations-grid .integration-card').length === 1 && document.querySelector('#integrations-grid .integration-card h3')?.textContent === 'Supabase'", 'Personal OS integration search');
+  await evaluate("(() => { const search=document.querySelector('#global-search'); search.value=''; search.dispatchEvent(new Event('input',{bubbles:true})); document.querySelector('[data-nav=apps]').click(); return true; })()");
+  await waitFor("!document.querySelector('#view-apps')?.hidden && document.querySelectorAll('#apps-grid > a.app-card').length === 2", 'Personal OS apps view');
+  console.log('PASS integration filters/search distinguish workspace tools from app-side connections');
+
+  await evaluate("document.querySelector('#add-shortcut').click(); true");
+  await waitFor("document.querySelector('#shortcut-dialog')?.open === true", 'Personal OS add-shortcut dialog');
+  await evaluate("(() => { document.querySelector('#shortcut-name').value='E2E Notebook Link'; document.querySelector('#shortcut-url').value='https://example.com/notes'; document.querySelector('#shortcut-category').value='Personal'; document.querySelector('#shortcut-form').requestSubmit(); return true; })()");
+  await waitFor("JSON.parse(localStorage.getItem('personal-os.shortcuts.v1') || '[]').some(item => item.name === 'E2E Notebook Link') && [...document.querySelectorAll('#apps-grid article.app-card')].some(card => card.textContent.includes('E2E Notebook Link'))", 'Personal OS shortcut write and render');
+  const shortcutStateBeforeUnsafe = await evaluate("localStorage.getItem('personal-os.shortcuts.v1')");
+  await evaluate("document.querySelector('#add-shortcut').click(); true");
+  await evaluate("(() => { document.querySelector('#shortcut-name').value='Unsafe URL Test'; document.querySelector('#shortcut-url').value='javascript:alert(1)'; document.querySelector('#shortcut-form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})); return true; })()");
+  await waitFor("!document.querySelector('#shortcut-error')?.hidden && document.querySelector('#shortcut-error')?.textContent.includes('valid HTTP or HTTPS URL')", 'Personal OS unsafe shortcut URL rejection');
+  assert.equal(await evaluate("localStorage.getItem('personal-os.shortcuts.v1')"), shortcutStateBeforeUnsafe, 'Unsafe shortcut input must not modify stored shortcuts.');
+  await evaluate("document.querySelector('#cancel-shortcut').click(); true");
+  await evaluate("document.querySelector('#theme-toggle').click(); true");
+  const themeAfterToggle = await evaluate("document.documentElement.dataset.theme");
+  assert.ok(themeAfterToggle === 'dark' || themeAfterToggle === 'light');
+  await cdp.send('Page.reload', {}, session);
+  await waitFor("document.querySelector('#view-apps') && !document.querySelector('#view-apps').hidden && [...document.querySelectorAll('#apps-grid article.app-card')].some(card => card.textContent.includes('E2E Notebook Link'))", 'Personal OS shortcut after reload');
+  assert.equal(await evaluate("document.documentElement.dataset.theme"), themeAfterToggle, 'Theme preference should survive reload.');
+  await evaluate("document.querySelector('#apps-grid article.app-card[data-shortcut-id] button[data-action=delete-shortcut]').click(); true");
+  await waitFor("JSON.parse(localStorage.getItem('personal-os.shortcuts.v1') || '[]').length === 0 && ![...document.querySelectorAll('#apps-grid article.app-card')].some(card => card.textContent.includes('E2E Notebook Link'))", 'Personal OS shortcut removal');
+  await cdp.send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true }, session);
+  const mobileShell = await evaluate("({width:innerWidth,scrollWidth:document.documentElement.scrollWidth})");
+  assert.ok(mobileShell.scrollWidth <= mobileShell.width, 'Personal OS mobile layout has horizontal overflow: viewport ' + mobileShell.width + ', document ' + mobileShell.scrollWidth);
+  await cdp.send('Emulation.clearDeviceMetricsOverride', {}, session);
+  console.log('PASS Personal OS custom shortcut save/reload/remove, URL validation, theme persistence and 390px layout');
+
   await cdp.send('Page.navigate', { url: web.url }, session);
-  await waitFor("document.readyState === 'complete' && document.querySelector('#status')?.textContent.includes('Local record store ready')", 'app boot');
+  await waitFor("document.readyState === 'complete' && document.querySelector('#status')?.textContent.includes('Local record store ready')", 'Archive Lab boot');
   console.log('PASS browser boot and local store initialization');
 
   await evaluate("(() => { document.querySelector('#title').value='E2E repair request'; document.querySelector('#notes').value='Confirm replacement part'; document.querySelector('#record-form').requestSubmit(); return true; })()");
