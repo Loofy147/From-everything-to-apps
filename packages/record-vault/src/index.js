@@ -263,12 +263,11 @@ export class RecordVault {
     const values = readAllowedFields(patch, new Set(['title', 'notes', 'status']), 'record update');
     const existing = this.#state.records.find((item) => item.id === id);
     if (!existing) fail('not-found', `Record not found: ${id}.`);
+    const candidateTimestamp = this.#clock().toISOString();
     const updated = normalizeRecord({
       ...existing,
       ...values,
-      updatedAt: this.#clock().toISOString() < existing.updatedAt
-        ? existing.updatedAt
-        : this.#clock().toISOString(),
+      updatedAt: candidateTimestamp < existing.updatedAt ? existing.updatedAt : candidateTimestamp,
     });
     this.#commit(this.#state.records.map((item) => item.id === id ? updated : item));
     return cloneRecord(updated);
