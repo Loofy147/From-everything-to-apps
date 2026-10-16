@@ -528,3 +528,13 @@ button:disabled { cursor: not-allowed; opacity: .5; }
   .dashboard-stat { align-items: center; }
   .dashboard-row { padding: 9px 5px; }
 }
+
+.dashboard-quick-actions { display: flex; flex-wrap: wrap; gap: 7px; justify-content: flex-end; }
+.dashboard-quick-actions .button { min-height: 34px; padding: 0 10px; font-size: 10px; }
+@media (max-width: 690px) {
+  .dashboard-quick-actions { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .dashboard-quick-actions .button { width: 100%; }
+}
+@media (max-width: 390px) {
+  .dashboard-quick-actions { grid-template-columns: minmax(0,1fr); }
+}
