@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="A local-first record vault demonstrating portable archive import and export.">
+  <title>Archive Lab — From Everything to Apps</title>
+  <link rel="stylesheet" href="./styles.css">
+  <script type="importmap">
+    {
+      "imports": {
+        "@from-everything-to-apps/portable-archive": "../../packages/portable-archive/src/index.js",
+        "@from-everything-to-apps/record-vault": "../../packages/record-vault/src/index.js"
+      }
+    }
+  </script>
+  <script type="module" src="./main.js"></script>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="./">From Everything to Apps <span>· Archive Lab</span></a>
+    <span class="local-badge">Stored in this browser</span>
+  </header>
+  <main class="layout">
+    <section class="intro">
+      <p class="eyebrow">CONSUMER HARNESS · CANDIDATE</p>
+      <h1>Portable records, with an explicit restore boundary.</h1>
+      <p>Create and update records, export an archive, or validate and import one. An import replaces the current record set only after format, integrity, migration, and domain checks pass.</p>
+      <p class="privacy-note"><strong>Local-only prototype.</strong> Data is stored in this browser's localStorage. Clearing site data can remove it. Do not use this prototype for sensitive or irreplaceable records; exports are not encrypted.</p>
+    </section>
+
+    <section class="toolbar" aria-label="Archive actions">
+      <button id="export" type="button" class="button primary">Export archive</button>
+      <label class="button secondary file-button" for="import-file">Import archive…</label>
+      <input id="import-file" type="file" accept=".json,application/json" hidden>
+      <button id="clear" type="button" class="button danger">Clear records</button>
+    </section>
+
+    <p id="status" role="status" aria-live="polite" class="status">Opening local record store…</p>
+
+    <section class="workspace">
+      <form id="record-form" class="panel">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">RECORD EDITOR</p>
+            <h2 id="form-heading">Add a record</h2>
+          </div>
+          <button id="cancel-edit" type="button" class="text-button" hidden>Cancel edit</button>
+        </div>
+        <input id="record-id" type="hidden">
+        <label for="title">Title</label>
+        <input id="title" name="title" required maxlength="200" autocomplete="off" placeholder="e.g. Prepare workshop quotation">
+        <label for="notes">Notes</label>
+        <textarea id="notes" name="notes" rows="4" maxlength="20000" placeholder="Optional details, next steps, or reminders"></textarea>
+        <button id="save-record" type="submit" class="button primary">Save record</button>
+      </form>
+
+      <section class="panel records-panel" aria-labelledby="records-heading">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">PERSISTED DATA</p>
+            <h2 id="records-heading">Records <span id="record-count" class="count">0</span></h2>
+          </div>
+        </div>
+        <div id="records" class="records-list">
+          <p class="empty">No records yet. Add one to begin.</p>
+        </div>
+      </section>
+    </section>
+
+    <details class="technical-note">
+      <summary>What this demo proves—and what it does not</summary>
+      <ul>
+        <li>Record changes are written before the in-memory state is advanced.</li>
+        <li>Archive imports validate the envelope, digest, schema and record domain before committing.</li>
+        <li>Failed writes and detected concurrent changes are covered by automated tests.</li>
+        <li>This is not encrypted storage, not a multi-user database, and not a substitute for tested backups or browser end-to-end testing.</li>
+      </ul>
+    </details>
+  </main>
+  <footer>Prototype · No account, cloud storage, analytics, or payment integration.</footer>
+</body>
+</html>
