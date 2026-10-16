@@ -583,16 +583,16 @@ function removeShortcut(id) {
 }
 
 function bindEvents() {
-  $('[data-nav]').forEach((button) => button.addEventListener('click', () => activateView(button.dataset.nav)));
+  $$('[data-nav]').forEach((button) => button.addEventListener('click', () => activateView(button.dataset.nav)));
   const quickCreateFocus = { notes: '#note-title', board: '#task-title', research: '#research-title-input', media: '#media-project-title' };
-  $('[data-quick-create]').forEach((button) => button.addEventListener('click', () => {
+  $$('[data-quick-create]').forEach((button) => button.addEventListener('click', () => {
     const view = button.dataset.quickCreate;
     activateView(view);
     requestAnimationFrame(() => $(quickCreateFocus[view])?.focus());
   }));
   $('#global-search').addEventListener('input', (event) => { applySearch(event.currentTarget.value); renderQuickSearch(); });
   $('#global-search-results').addEventListener('keydown', (event) => {
-    const options = $('.quick-search-result', $('#global-search-results'));
+    const options = $$('.quick-search-result', $('#global-search-results'));
     const index = options.indexOf(document.activeElement);
     if (event.key === 'ArrowDown' && options.length) {
       event.preventDefault();
