@@ -271,7 +271,94 @@ function renderIntegrationView() {
   $('#metric-integrations').textContent = String(registry.integrations.length);
 }
 
+
+function displayDate(value) {
+  if (!value) return 'No due date';
+  const normalized = value.length === 10 ? value + 'T12:00:00' : value;
+  const date = new Date(normalized);
+  return Number.isNaN(date.valueOf()) ? value : date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
+function renderDashboardList(host, items, emptyText, view, getTitle, getMeta, getSelector) {
+  host.replaceChildren();
+  if (!items.length) {
+    host.append(node('p', 'dashboard-empty', emptyText));
+    return;
+  }
+  for (const item of items) {
+    const entry = node('button', 'dashboard-row');
+    entry.type = 'button';
+    entry.append(
+      node('span', 'dashboard-row-main', getTitle(item)),
+      node('span', 'dashboard-row-meta', getMeta(item)),
+      node('span', 'dashboard-row-arrow', '↗')
+    );
+    entry.addEventListener('click', () => {
+      activateView(view);
+      requestAnimationFrame(() => {
+        const target = document.querySelector(getSelector(item));
+        if (target) {
+          target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          target.setAttribute('tabindex', '-1');
+          target.focus({ preventScroll: true });
+        }
+      });
+    });
+    host.append(entry);
+  }
+}
+
+function renderPersonalDashboard() {
+  const data = getPersonalAppsSnapshot();
+  const current = new Date();
+  const today = [current.getFullYear(), String(current.getMonth() + 1).padStart(2, '0'), String(current.getDate()).padStart(2, '0')].join('-');
+  const openTasks = data.tasks.filter((task) => task.status !== 'done');
+  const dueTasks = openTasks.filter((task) => task.dueDate && task.dueDate <= today);
+  const reviewItems = data.research.filter((item) => item.status === 'to-review');
+  const activeMedia = data.media.filter((item) => item.stage !== 'done');
+
+  $('#dashboard-open-tasks').textContent = String(openTasks.length);
+  $('#dashboard-due-tasks').textContent = String(dueTasks.length);
+  $('#dashboard-review-count').textContent = String(reviewItems.length);
+  $('#dashboard-media-active').textContent = String(activeMedia.length);
+  $('#dashboard-storage-notice').hidden = data.storageHealthy;
+
+  const nextTasks = [...openTasks].sort((a, b) => {
+    const aDue = a.dueDate || '9999-12-31';
+    const bDue = b.dueDate || '9999-12-31';
+    return aDue.localeCompare(bDue) || Date.parse(b.updatedAt) - Date.parse(a.updatedAt);
+  }).slice(0, 5);
+  renderDashboardList(
+    $('#dashboard-next-list'), nextTasks, 'No open tasks. Add a next action to make progress visible.', 'board',
+    (task) => task.title,
+    (task) => [task.priority === 'high' ? 'High priority' : task.priority === 'low' ? 'Low priority' : 'Normal priority', task.dueDate ? displayDate(task.dueDate) : 'No due date'].join(' · '),
+    (task) => '#task-' + task.id
+  );
+  const recentNotes = [...data.notes].sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt)).slice(0, 4);
+  renderDashboardList(
+    $('#dashboard-notes-list'), recentNotes, 'No notes yet. Save a reusable idea or decision.', 'notes',
+    (item) => item.title,
+    (item) => (item.pinned ? 'Pinned · ' : '') + 'Updated ' + displayDate(item.updatedAt.slice(0, 10)),
+    (item) => '#note-' + item.id
+  );
+  const researchQueue = [...reviewItems].sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt)).slice(0, 4);
+  renderDashboardList(
+    $('#dashboard-research-list'), researchQueue, 'Research queue clear. Add a source when you investigate something.', 'research',
+    (item) => item.title,
+    (item) => item.url ? new URL(item.url).hostname : 'No source URL',
+    (item) => '#research-' + item.id
+  );
+  const mediaQueue = [...activeMedia].sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt)).slice(0, 4);
+  renderDashboardList(
+    $('#dashboard-media-list'), mediaQueue, 'No active creative projects. Add a brief when work starts.', 'media',
+    (item) => item.title,
+    (item) => item.stage.charAt(0).toUpperCase() + item.stage.slice(1),
+    (item) => '#media-' + item.id
+  );
+}
+
 function renderOverview() {
+  renderPersonalDashboard();
   renderBuiltInApps($('#overview-app-grid'), registry.apps, 3);
   const host = $('#overview-module-grid');
   host.replaceChildren();
