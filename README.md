@@ -14,7 +14,7 @@ The reference repository is research material—not an architecture we must pres
 | Record Vault | Candidate | 15 focused tests pass; Chromium tests exercise local persistence, reload, export/import, tamper rejection and 390px layout. Cross-browser and data-loss recovery for Record Vault remain open. |
 | Khidma Core | Candidate | 12 domain tests cover customers, job references, status transitions, DZD limits and manual payment totals. |
 | Archive Lab | Prototype | Chromium acceptance passes create/edit/reload/export/clear/restore/tamper rejection; used to verify portable data boundaries. |
-| Khidma Desk | Prototype | Chromium covers invalid archive classes, storage-write failure, concurrent import conflict, and external-backup recovery after clearing origin storage. User research, accessibility and cross-browser checks remain open. |
+| Khidma Desk | Prototype | Chromium covers invalid archive classes, storage-write failure, concurrent import conflict, and external-backup recovery after clearing application localStorage. User research, accessibility and cross-browser checks remain open. |
 
 ## Engineering principles
 
@@ -46,7 +46,7 @@ Run focused checks with `npm run test:portable-archive` or `npm run test:khidma-
 
 ## Try the consumer harness
 
-From the repository root, start a static server with `python3 -m http.server 4173` and open `http://localhost:4173/apps/archive-lab/` or `http://localhost:4173/apps/khidma-desk/`. See the application READMEs for limits. Both are local-only prototypes using unencrypted browser `localStorage`; they are not production-ready. Automated Chromium checks pass, including restoration of Khidma Desk from a downloaded backup after clearing all origin storage. Manual cross-browser validation, broader accessibility checks and recovery testing for Record Vault remain open.
+From the repository root, start a static server with `python3 -m http.server 4173` and open `http://localhost:4173/apps/archive-lab/` or `http://localhost:4173/apps/khidma-desk/`. See the application READMEs for limits. Both are local-only prototypes using unencrypted browser `localStorage`; they are not production-ready. Automated Chromium checks pass, including restoration of Khidma Desk from a downloaded backup after clearing all application localStorage. Manual cross-browser validation, broader accessibility checks and recovery testing for Record Vault remain open.
 
 ## Layout
 
