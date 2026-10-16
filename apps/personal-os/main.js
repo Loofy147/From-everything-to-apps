@@ -290,7 +290,7 @@ function renderAll() {
   renderIntegrationView();
 }
 
-const viewTitles = { overview: 'Overview', apps: 'My apps', integrations: 'Integrations', architecture: 'System map', notes: 'Notes & Knowledge', board: 'Work Board', research: 'Research Library', data: 'Backup & Data' };
+const viewTitles = { overview: 'Overview', apps: 'My apps', integrations: 'Integrations', architecture: 'System map', notes: 'Notes & Knowledge', board: 'Work Board', research: 'Research Library', files: 'Files & Documents', media: 'Media Workbench', data: 'Backup & Data' };
 function activateView(view, updateHash = true) {
   if (!Object.hasOwn(viewTitles, view)) view = 'overview';
   activeView = view;
@@ -445,8 +445,10 @@ async function loadRegistry() {
     throw new Error('Registry shape or schema version is unsupported.');
   }
   for (const app of data.apps) {
+    const internalRoute = typeof app?.href === 'string' && /^#(notes|board|research|files|media|data)$/.test(app.href);
+    const externalAppPath = typeof app?.href === 'string' && app.href.startsWith('/') && !app.href.startsWith('//');
     if (!app || typeof app.id !== 'string' || typeof app.name !== 'string' ||
-      typeof app.href !== 'string' || !app.href.startsWith('/') || app.href.startsWith('//')) {
+      typeof app.href !== 'string' || (!externalAppPath && !internalRoute)) {
       throw new Error('The registry contains an invalid built-in app entry.');
     }
   }
