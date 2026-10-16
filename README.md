@@ -10,7 +10,7 @@ The reference repository is research material—not an architecture we must pres
 |---|---|---|
 | Project charter and standards | Established | `docs/engineering-standards.md` |
 | Extraction and provenance process | Established | `docs/capability-extraction.md`, `docs/source-register.md` |
-| Portable Archive package | Implemented; candidate | 14 local unit tests pass; remote CI and application integration remain pending |
+| Portable Archive package | Candidate; core tests green | 15 local unit tests and remote CI pass; consuming-app integration, browser execution, and restore workflow remain pending |
 | Consumer application | Not started | Choose after a real workflow requires the tested capabilities |
 
 ## Engineering principles
