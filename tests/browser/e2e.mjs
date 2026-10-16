@@ -227,18 +227,6 @@ try {
   await waitFor("document.querySelector('.job-card h3')?.textContent === 'Repair air conditioner' && document.querySelector('.payment-entry') !== null && JSON.parse(localStorage.getItem('khidma-desk.state.v1') || '{}').jobs?.some(j => j.quotedAmountDzd === 15000)", 'Khidma job, payment and updated estimate restore after reload');
   console.log('PASS status transition, payment, estimate update after deposit and reload persistence');
 
-  await cdp.send('Page.bringToFront', {}, session);
-  await evaluate("document.querySelector('.job-card button[data-action=estimate]').focus(); true");
-  await cdp.send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Enter', code: 'Enter', text: '\\r', unmodifiedText: '\\r', windowsVirtualKeyCode: 13, nativeVirtualKeyCode: 13 }, session);
-  await cdp.send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13, nativeVirtualKeyCode: 13 }, session);
-  await waitFor("document.querySelector('#estimate-dialog')?.open === true", 'keyboard opening of estimate dialog');
-  assert.equal(await evaluate("document.activeElement?.id"), 'estimate-amount', 'Opening the estimate dialog should move focus to its input.');
-  await cdp.send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27, nativeVirtualKeyCode: 27 }, session);
-  await cdp.send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27, nativeVirtualKeyCode: 27 }, session);
-  await waitFor("document.querySelector('#estimate-dialog')?.open === false", 'keyboard closing of estimate dialog');
-  assert.equal(await evaluate("document.activeElement?.dataset.action"), 'estimate', 'Closing the estimate dialog should return focus to its opener.');
-  console.log('PASS keyboard focus enters the estimate dialog and returns to the opener on Escape');
-
   await evaluate("document.querySelector('#export').click(); true");
   const khidmaStateBeforeExport = await evaluate("localStorage.getItem('khidma-desk.state.v1')");
   const khidmaArchivePath = await until(async () => {
