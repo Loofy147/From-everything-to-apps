@@ -8,6 +8,7 @@ import {
   addJob,
   canTransitionJob,
   createEmptyState,
+  updateJobEstimate,
   KhidmaError,
   normalizeState,
   paymentTotal,
@@ -38,6 +39,7 @@ const messages = {
     customersListEyebrow: 'CARNET CLIENTS', customers: 'Clients', jobsListEyebrow: 'INTERVENTIONS', jobs: 'Interventions',
     noCustomers: 'Aucun client pour le moment.', noJobs: 'Aucune intervention pour le moment.',
     customerFirst: 'Ajoutez d’abord un client', phonePlaceholder: '+213 …', titlePlaceholder: 'Réparation, installation, entretien…',
+    updateEstimate: 'Définir / modifier l’estimation', estimateEyebrow: 'ESTIMATION', estimateDialogTitle: 'Définir ou modifier l’estimation', estimateAmountLabel: 'Montant estimé (DZD)', estimateWarning: 'Il s’agit d’une estimation, pas d’une facture ou d’un devis conforme.', saveEstimate: 'Enregistrer l’estimation',
     payment: 'Enregistrer un paiement', paymentEyebrow: 'SAISIE DE PAIEMENT', paymentAmount: 'Montant (DZD) *',
     paymentMethod: 'Mode de paiement *', paymentReference: 'Référence (facultatif)', paymentWarning: 'Saisie manuelle uniquement : aucun paiement n’est traité ni vérifié.',
     cash: 'Espèces', bank_transfer: 'Virement bancaire', cib: 'CIB', edahabia: 'Edahabia', other: 'Autre',
@@ -50,7 +52,7 @@ const messages = {
     deleted: 'Les données locales ont été effacées.', exported: 'Sauvegarde exportée. Elle n’est pas chiffrée.',
     imported: 'Sauvegarde restaurée.', importSame: 'Cette sauvegarde correspond déjà aux données locales.',
     importRejected: 'Import refusé. Les données existantes n’ont pas été remplacées.',
-    saveFailed: 'Enregistrement impossible. Les données en mémoire n’ont pas été avancées.',
+    saveFailed: 'Enregistrement impossible. Les données en mémoire n’ont pas été avancées.', savedEstimate: 'Estimation enregistrée.', estimateLocked: 'L’estimation est verrouillée après la première saisie de paiement.',
     storageConflict: 'Les données ont changé ailleurs. Rechargez la page avant une nouvelle modification.',
     exportFailed: 'Export impossible.', bootFailed: 'Impossible d’ouvrir les données locales. Le contenu existant n’a pas été réinitialisé.',
     clearConfirm: 'Effacer tous les clients et interventions de ce navigateur ? Cette action ne supprime pas les sauvegardes exportées.',
@@ -78,6 +80,7 @@ const messages = {
     customersListEyebrow: 'سجل الزبائن', customers: 'الزبائن', jobsListEyebrow: 'الأعمال', jobs: 'الأعمال',
     noCustomers: 'لا يوجد زبائن بعد.', noJobs: 'لا توجد أعمال بعد.',
     customerFirst: 'أضف زبوناً أولاً', phonePlaceholder: '+213 …', titlePlaceholder: 'إصلاح، تركيب، صيانة…',
+    updateEstimate: 'تحديد / تعديل التقدير', estimateEyebrow: 'تقدير المبلغ', estimateDialogTitle: 'تحديد أو تعديل المبلغ التقديري', estimateAmountLabel: 'المبلغ التقديري (دج)', estimateWarning: 'هذا مبلغ تقديري وليس فاتورة رسمية أو عرض سعر مطابقاً للقانون.', saveEstimate: 'حفظ التقدير',
     payment: 'تسجيل دفعة', paymentEyebrow: 'تسجيل الدفع', paymentAmount: 'المبلغ (دج) *',
     paymentMethod: 'طريقة الدفع *', paymentReference: 'المرجع (اختياري)', paymentWarning: 'إدخال يدوي فقط: التطبيق لا يعالج الدفع ولا يتحقق منه.',
     cash: 'نقداً', bank_transfer: 'تحويل بنكي', cib: 'CIB', edahabia: 'الذهبية', other: 'أخرى',
@@ -90,7 +93,7 @@ const messages = {
     deleted: 'تم مسح البيانات المحلية.', exported: 'تم تصدير النسخة الاحتياطية. الملف غير مشفّر.',
     imported: 'تم استرجاع النسخة الاحتياطية.', importSame: 'تطابق هذه النسخة البيانات المحلية الحالية.',
     importRejected: 'رُفض الاستيراد. لم يتم استبدال البيانات الحالية.',
-    saveFailed: 'تعذّر الحفظ. لم يتم تحديث الحالة في الذاكرة.',
+    saveFailed: 'تعذّر الحفظ. لم يتم تحديث الحالة في الذاكرة.', savedEstimate: 'تم حفظ المبلغ التقديري.', estimateLocked: 'يُقفل المبلغ التقديري بعد تسجيل أول دفعة.',
     storageConflict: 'تغيّرت البيانات في مكان آخر. أعد تحميل الصفحة قبل التعديل مجدداً.',
     exportFailed: 'تعذّر التصدير.', bootFailed: 'تعذّر فتح البيانات المحلية. لم يتم مسح البيانات الموجودة.',
     clearConfirm: 'هل تريد مسح كل الزبائن والأعمال من هذا المتصفح؟ لن تُحذف ملفات النسخ الاحتياطية المصدّرة.',
@@ -146,6 +149,7 @@ function applyLanguage() {
     customersListEyebrow: ['customers-list-eyebrow','customersListEyebrow'], customers: ['customers-heading','customers'],
     jobsListEyebrow: ['jobs-list-eyebrow','jobsListEyebrow'], jobs: ['jobs-heading','jobs'],
     limits: ['limits-heading','limits'], limitsCopy: ['limits-copy','limitsCopy'], footer: ['footer','footer'],
+    estimateEyebrow: ['estimate-eyebrow','estimateEyebrow'], estimateHeading: ['estimate-heading','estimateDialogTitle'], estimateAmountDialog: ['estimate-amount-label','estimateAmountLabel'], estimateWarning: ['estimate-warning','estimateWarning'], saveEstimate: ['save-estimate','saveEstimate'], cancelEstimate: ['cancel-estimate','cancel'], closeEstimate: ['close-estimate','close'],
     paymentEyebrow: ['payment-eyebrow','paymentEyebrow'], paymentHeading: ['payment-heading','payment'],
     paymentAmount: ['payment-amount-label','paymentAmount'], paymentMethod: ['payment-method-label','paymentMethod'],
     paymentReference: ['payment-reference-label','paymentReference'], paymentWarning: ['payment-warning','paymentWarning'],
@@ -154,6 +158,7 @@ function applyLanguage() {
   for (const value of Object.values(labels)) setText(value[0], value[1]);
   $('import-file').setAttribute('aria-label', t('import'));
   $('close-payment').setAttribute('aria-label', t('close'));
+  $('close-estimate').setAttribute('aria-label', t('close'));
   $('import-file').title = t('import');
   $('export').title = t('export');
   $('language-select').setAttribute('aria-label', t('language'));
@@ -366,6 +371,18 @@ function renderJobs() {
     paymentButton.type = 'button';
     paymentButton.dataset.action = 'payment';
     paymentButton.disabled = job.quotedAmountDzd === null || paymentTotal(job) >= job.quotedAmountDzd;
+    const estimateButton = textElement('button', 'button secondary', t('updateEstimate'));
+    estimateButton.type = 'button';
+    estimateButton.dataset.action = 'estimate';
+    estimateButton.disabled = job.payments.length > 0;
+    estimateButton.title = job.payments.length ? t('estimateLocked') : t('updateEstimate');
+    estimateButton.addEventListener('click', () => {
+      $('estimate-job-id').value = job.id;
+      $('estimate-amount').value = job.quotedAmountDzd === null ? '' : String(job.quotedAmountDzd);
+      $('estimate-dialog').showModal();
+      $('estimate-amount').focus();
+    });
+
     paymentButton.addEventListener('click', () => {
       $('payment-job-id').value = job.id;
       $('payment-amount').value = '';
@@ -374,7 +391,7 @@ function renderJobs() {
       $('payment-dialog').showModal();
       $('payment-amount').focus();
     });
-    actions.append(statusLabel, paymentButton);
+    actions.append(statusLabel, estimateButton, paymentButton);
     card.append(actions);
 
     if (job.payments.length) {
@@ -481,6 +498,24 @@ $('job-form').addEventListener('submit', (event) => {
   }
 });
 
+$('estimate-form').addEventListener('submit', (event) => {
+  event.preventDefault();
+  if (!state) return;
+  const jobId = $('estimate-job-id').value;
+  const amountText = $('estimate-amount').value.trim();
+  const amount = amountText === '' ? null : Number(amountText);
+  try {
+    commit(updateJobEstimate(state, jobId, amount, localTimestamp()));
+    $('estimate-dialog').close();
+    announce(t('savedEstimate'));
+  } catch (error) {
+    announce(t('saveFailed') + ' ' + (error.message || ''), 'error');
+  }
+});
+
+$('close-estimate').addEventListener('click', () => $('estimate-dialog').close());
+$('cancel-estimate').addEventListener('click', () => $('estimate-dialog').close());
+
 $('payment-form').addEventListener('submit', (event) => {
   event.preventDefault();
   if (!state) return;
@@ -538,6 +573,9 @@ importInput.addEventListener('change', async () => {
     capturedStorage = storage.getItem(STORAGE_KEY);
   } catch (error) {
     announce(t('importRejected') + ' ' + (error.message || ''), 'error'); return;
+  }
+  if (capturedStorage !== lastPersisted) {
+    announce(t('storageConflict'), 'error'); return;
   }
   try {
     const archive = await parseArchive(await file.text(), {
