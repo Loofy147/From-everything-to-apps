@@ -43,6 +43,7 @@ textarea { resize: vertical; }
 .language-label select { width: auto; min-width: 112px; min-height: 38px; padding: .4rem .6rem; }
 .secondary { color: var(--ink); background: var(--panel); }
 .primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.danger { color: var(--danger); background: var(--panel); }
 .page { width: min(1240px, 100%); margin: 0 auto; padding: clamp(1rem, 3.8vw, 2.8rem); }
 .hero { max-width: 860px; }
 .eyebrow { margin: 0 0 .5rem; font-size: .72rem; font-weight: 800; letter-spacing: .12em; color: var(--accent); }
