@@ -22,3 +22,14 @@ A record here does not imply code was copied or the upstream app passed our test
 | Video/creative apps | Prior static review of `src/*-studio` | Media processing and local/cloud boundaries | Assess capability by capability; do not import whole apps. |
 
 Before reuse, re-fetch current license and notices, compare blob SHAs, inspect changes since this snapshot, and update this register. Blob SHAs identify reviewed Git objects, not a legal opinion.
+
+
+## Downstream capability implementation
+
+| Our path | Role | Upstream lineage | Current evidence |
+|---|---|---|---|
+| `packages/portable-archive` | Versioned JSON envelope, SHA-256 integrity, size bounds, migration hook | No upstream code copied. Behavior requirements informed by Notes archive/import documentation at the pinned snapshot above. | 15 focused tests; workspace import tested; remote CI success. Does not encrypt, authenticate, persist, or perform a full restore. |
+| `packages/record-vault` | Domain-validated record store using a Storage-compatible adapter and Portable Archive | Original implementation. The Notes and Spreadsheet docs informed local-first and export/import boundary review; no upstream source files copied. | 15 focused tests on a deterministic in-memory Storage adapter. Browser localStorage, real quota failures, browser crash/recovery, and multi-tab editing are not verified. |
+| `apps/archive-lab` | Static browser consumer UI for record create/update/delete, export/import | Original integration harness; uses import maps to connect the two packages. | Module syntax included in CI. Manual browser acceptance checklist remains open. |
+
+All claims above are limited to tests and commit evidence. Do not imply browser-level tests passed until they have been executed and their results recorded.
