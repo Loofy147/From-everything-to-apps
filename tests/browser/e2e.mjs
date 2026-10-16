@@ -134,6 +134,19 @@ try {
   async function waitFor(expression, label, timeout) {
     return until(async () => evaluate(expression), label, timeout || 10000);
   }
+  async function uploadKhidmaArchive(text, filename) {
+    const expression = "(async () => { const input=document.querySelector('#import-file'); const dt=new DataTransfer(); dt.items.add(new File([" + JSON.stringify(text) + "], " + JSON.stringify(filename) + ", {type:'application/json'})); input.files=dt.files; input.dispatchEvent(new Event('change',{bubbles:true})); return true; })()";
+    await evaluate(expression);
+  }
+  async function assertKhidmaImportRejected(text, filename, label) {
+    const before = await evaluate("localStorage.getItem('khidma-desk.state.v1')");
+    const messageBefore = await evaluate("document.querySelector('#status')?.textContent");
+    await uploadKhidmaArchive(text, filename);
+    const changedStatus = "document.querySelector('#status')?.dataset.kind === 'error' && document.querySelector('#status')?.textContent !== " + JSON.stringify(messageBefore);
+    await waitFor(changedStatus, label);
+    assert.equal(await evaluate("localStorage.getItem('khidma-desk.state.v1')"), before, label + " must preserve the current stored state");
+    console.log("PASS " + label + " rejects the import without overwriting current data");
+  }
 
   await cdp.send('Page.navigate', { url: web.url }, session);
   await waitFor("document.readyState === 'complete' && document.querySelector('#status')?.textContent.includes('Local record store ready')", 'app boot');
@@ -214,6 +227,17 @@ try {
   await waitFor("document.querySelector('.job-card h3')?.textContent === 'Repair air conditioner' && document.querySelector('.payment-entry') !== null && JSON.parse(localStorage.getItem('khidma-desk.state.v1') || '{}').jobs?.some(j => j.quotedAmountDzd === 15000)", 'Khidma job, payment and updated estimate restore after reload');
   console.log('PASS status transition, payment, estimate update after deposit and reload persistence');
 
+  await evaluate("document.querySelector('.job-card button[data-action=estimate]').focus(); true");
+  await cdp.send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13, nativeVirtualKeyCode: 13 }, session);
+  await cdp.send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13, nativeVirtualKeyCode: 13 }, session);
+  await waitFor("document.querySelector('#estimate-dialog')?.open === true", 'keyboard opening of estimate dialog');
+  assert.equal(await evaluate("document.activeElement?.id"), 'estimate-amount', 'Opening the estimate dialog should move focus to its input.');
+  await cdp.send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27, nativeVirtualKeyCode: 27 }, session);
+  await cdp.send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27, nativeVirtualKeyCode: 27 }, session);
+  await waitFor("document.querySelector('#estimate-dialog')?.open === false", 'keyboard closing of estimate dialog');
+  assert.equal(await evaluate("document.activeElement?.dataset.action"), 'estimate', 'Closing the estimate dialog should return focus to its opener.');
+  console.log('PASS keyboard focus enters the estimate dialog and returns to the opener on Escape');
+
   await evaluate("document.querySelector('#export').click(); true");
   const khidmaStateBeforeExport = await evaluate("localStorage.getItem('khidma-desk.state.v1')");
   const khidmaArchivePath = await until(async () => {
@@ -229,20 +253,62 @@ try {
   assert.equal(khidmaArchive.data.jobs[0].payments[0].amountDzd, 3000);
   await evaluate("document.querySelector('#clear').click(); true");
   await waitFor("JSON.parse(localStorage.getItem('khidma-desk.state.v1') || '{}').customers?.length === 0 && JSON.parse(localStorage.getItem('khidma-desk.state.v1') || '{}').jobs?.length === 0", 'Khidma clear');
-  const khidmaImportEvent = "(async () => { const input=document.querySelector('#import-file'); const dt=new DataTransfer(); dt.items.add(new File([" + JSON.stringify(khidmaArchiveText) + "], 'khidma-backup.json', {type:'application/json'})); input.files=dt.files; input.dispatchEvent(new Event('change',{bubbles:true})); return true; })()";
-  await evaluate(khidmaImportEvent);
+  await uploadKhidmaArchive(khidmaArchiveText, 'khidma-backup.json');
   await waitFor("JSON.parse(localStorage.getItem('khidma-desk.state.v1') || '{}').jobs?.some(j => j.title === 'Repair air conditioner' && j.payments?.length === 1)", 'Khidma restore');
   assert.equal(await evaluate("localStorage.getItem('khidma-desk.state.v1')"), khidmaStateBeforeExport, 'All customer, job, status and payment fields must round-trip without change.');
   console.log('PASS Khidma export, clear and exact full-state restore');
 
   const invalidKhidmaArchive = JSON.stringify({ ...khidmaArchive, data: { ...khidmaArchive.data, jobs: khidmaArchive.data.jobs.map((job) => ({ ...job, title: 'Tampered job' })) } });
   const khidmaStateBeforeInvalid = await evaluate("localStorage.getItem('khidma-desk.state.v1')");
-  const invalidKhidmaEvent = "(async () => { const input=document.querySelector('#import-file'); const dt=new DataTransfer(); dt.items.add(new File([" + JSON.stringify(invalidKhidmaArchive) + "], 'invalid-khidma-backup.json', {type:'application/json'})); input.files=dt.files; input.dispatchEvent(new Event('change',{bubbles:true})); return true; })()";
-  await evaluate(invalidKhidmaEvent);
+  await uploadKhidmaArchive(invalidKhidmaArchive, 'invalid-khidma-backup.json');
   await waitFor("document.querySelector('#status')?.dataset.kind === 'error'", 'Khidma invalid archive rejection');
   assert.equal(await evaluate("localStorage.getItem('khidma-desk.state.v1')"), khidmaStateBeforeInvalid);
   assert.equal(await evaluate("document.querySelector('.job-card h3')?.textContent"), 'Repair air conditioner');
   console.log('PASS Khidma tampered backup rejection preserves customer, job and payment');
+
+  const rejectionFixtures = await evaluate("(async () => { const { createArchive } = await import('/packages/portable-archive/src/index.js'); const current = JSON.parse(localStorage.getItem('khidma-desk.state.v1')); const wrongApp = await createArchive({ appId: 'another-app', schemaVersion: 1, data: current }); const futureSchema = await createArchive({ appId: 'khidma-desk', schemaVersion: 99, data: current }); const invalidDomain = await createArchive({ appId: 'khidma-desk', schemaVersion: 1, data: { schemaVersion: 1, customers: [], jobs: [{}] } }); return { wrongApp: JSON.stringify(wrongApp), futureSchema: JSON.stringify(futureSchema), invalidDomain: JSON.stringify(invalidDomain) }; })()");
+  await assertKhidmaImportRejected(rejectionFixtures.wrongApp, 'wrong-app-backup.json', 'wrong-app archive');
+  await assertKhidmaImportRejected(rejectionFixtures.futureSchema, 'future-schema-backup.json', 'future-schema archive');
+  await assertKhidmaImportRejected(rejectionFixtures.invalidDomain, 'invalid-domain-backup.json', 'domain-invalid archive');
+
+  const stateBeforeOversize = await evaluate("localStorage.getItem('khidma-desk.state.v1')");
+  const statusBeforeOversize = await evaluate("document.querySelector('#status')?.textContent");
+  await evaluate("(() => { const input=document.querySelector('#import-file'); const dt=new DataTransfer(); dt.items.add(new File([new Uint8Array(10 * 1024 * 1024 + 1)], 'oversize-backup.json', {type:'application/json'})); input.files=dt.files; input.dispatchEvent(new Event('change',{bubbles:true})); return true; })()");
+  await waitFor("document.querySelector('#status')?.dataset.kind === 'error' && document.querySelector('#status')?.textContent !== " + JSON.stringify(statusBeforeOversize), 'oversized archive rejection');
+  assert.equal(await evaluate("localStorage.getItem('khidma-desk.state.v1')"), stateBeforeOversize, 'An oversized import must preserve current data.');
+  console.log('PASS oversized archive rejected before parsing and preserves current data');
+
+  const stateBeforeWriteFailure = await evaluate("localStorage.getItem('khidma-desk.state.v1')");
+  await evaluate("(() => { const original = Storage.prototype.setItem; Storage.prototype.setItem = function(key, value) { if (key === 'khidma-desk.state.v1') throw new DOMException('Synthetic quota exceeded', 'QuotaExceededError'); return original.call(this, key, value); }; document.querySelector('#customer-name').value = 'Write failure sentinel'; document.querySelector('#customer-form').requestSubmit(); Storage.prototype.setItem = original; return true; })()");
+  await waitFor("document.querySelector('#status')?.dataset.kind === 'error' && document.querySelector('#status')?.textContent.includes('Enregistrement impossible')", 'localStorage write failure handling');
+  assert.equal(await evaluate("localStorage.getItem('khidma-desk.state.v1')"), stateBeforeWriteFailure, 'A failed localStorage write must preserve the prior persisted state.');
+  assert.equal(await evaluate("[...document.querySelectorAll('.customer-card')].some(card => card.textContent.includes('Write failure sentinel'))"), false, 'A failed localStorage write must not advance the visible customer list.');
+  console.log('PASS simulated localStorage quota failure preserves persisted and visible state');
+
+  await evaluate("(() => { const originalText = File.prototype.text; File.prototype.text = function() { const pending = originalText.call(this); const key = 'khidma-desk.state.v1'; const changed = JSON.parse(Storage.prototype.getItem.call(localStorage, key)); const now = new Date().toISOString(); changed.customers.push({ id: 'concurrent-external-update', name: 'Concurrent external update', phone: '', address: '', notes: '', createdAt: now, updatedAt: now }); Storage.prototype.setItem.call(localStorage, key, JSON.stringify(changed)); return pending; }; const input = document.querySelector('#import-file'); const dt = new DataTransfer(); dt.items.add(new File([" + JSON.stringify(khidmaArchiveText) + "], 'concurrent-restore.json', {type:'application/json'})); input.files = dt.files; input.dispatchEvent(new Event('change', {bubbles:true})); File.prototype.text = originalText; return true; })()");
+  await waitFor("document.querySelector('#status')?.dataset.kind === 'error' && document.querySelector('#status')?.textContent.includes('Les données ont changé ailleurs')", 'concurrent change during asynchronous import');
+  const concurrentStored = await evaluate("localStorage.getItem('khidma-desk.state.v1')");
+  assert.ok(JSON.parse(concurrentStored).customers.some((customer) => customer.name === 'Concurrent external update'), 'The newer externally stored customer must not be overwritten by the import.');
+  assert.equal(await evaluate("[...document.querySelectorAll('.customer-card')].some(card => card.textContent.includes('Concurrent external update'))"), false, 'The stale in-memory view must not silently claim it includes the external update.');
+  console.log('PASS concurrent storage change during asynchronous import is detected without overwriting newer stored data');
+  await cdp.send('Page.reload', {}, session);
+  await waitFor("document.querySelector('#status')?.dataset.ready === 'true'", 'Khidma reload after external storage update');
+  await waitFor("[...document.querySelectorAll('.customer-card')].some(card => card.textContent.includes('Concurrent external update'))", 'fresh page loads newer external state');
+  assert.equal(await evaluate("localStorage.getItem('khidma-desk.state.v1')"), concurrentStored, 'Reload should load the validated externally stored state.');
+  console.log('PASS reload reconciles the UI with the newer stored state after a detected conflict');
+
+  const origin = new URL(web.url).origin;
+  await cdp.send('Storage.clearDataForOrigin', { origin, storageTypes: 'all' });
+  await cdp.send('Page.reload', {}, session);
+  await waitFor("document.querySelector('#status')?.dataset.ready === 'true'", 'Khidma boot after clearing all origin storage');
+  await waitFor("JSON.parse(localStorage.getItem('khidma-desk.state.v1') || '{}').customers?.length === 0 && JSON.parse(localStorage.getItem('khidma-desk.state.v1') || '{}').jobs?.length === 0", 'Khidma empty state after origin data deletion');
+  const emptyAfterOriginClear = await evaluate("JSON.parse(localStorage.getItem('khidma-desk.state.v1') || '{}')");
+  assert.equal(emptyAfterOriginClear.customers.length, 0);
+  assert.equal(emptyAfterOriginClear.jobs.length, 0);
+  await uploadKhidmaArchive(khidmaArchiveText, 'recovery-after-origin-wipe.json');
+  await waitFor("localStorage.getItem('khidma-desk.state.v1') === " + JSON.stringify(khidmaStateBeforeExport), 'restore from downloaded backup after clearing browser origin storage');
+  assert.equal(await evaluate("localStorage.getItem('khidma-desk.state.v1')"), khidmaStateBeforeExport, 'The backup must restore the complete prior dataset after origin storage is cleared.');
+  console.log('PASS downloaded external backup restores full state after all origin storage is cleared');
 
   await evaluate("(() => { const select=document.querySelector('#language-select'); select.value='ar'; select.dispatchEvent(new Event('change',{bubbles:true})); return true; })()");
   await waitFor("document.documentElement.lang === 'ar' && document.documentElement.dir === 'rtl'", 'Arabic RTL locale');
