@@ -155,6 +155,7 @@ export class RecordVault {
   #clock;
   #idFactory;
   #state;
+  #generation = 0;
 
   constructor({ storage, storageKey = DEFAULT_STORAGE_KEY, clock = () => new Date(), idFactory } = {}) {
     if (!storage || typeof storage.getItem !== 'function' || typeof storage.setItem !== 'function') {
@@ -194,7 +195,7 @@ export class RecordVault {
     if (typeof stored !== 'string') fail('corrupt-storage', 'Saved record data must be text; existing data was left untouched.');
     const parsed = parseStoredState(stored);
     // Rewrite only a valid state, and persist schema migration before returning.
-    if (!stored.startsWith('{"schemaVersion":2,')) vault.#writeState(parsed);
+    if (stored !== toStorageText(parsed)) vault.#writeState(parsed);
     vault.#state = parsed;
     return vault;
   }
@@ -213,6 +214,7 @@ export class RecordVault {
     // Publish to memory only after storage confirms the single-key write succeeded.
     this.#writeState(nextState);
     this.#state = nextState;
+    this.#generation += 1;
   }
 
   listRecords() {
@@ -274,6 +276,8 @@ export class RecordVault {
   }
 
   async importArchive(input) {
+    const observedGeneration = this.#generation;
+    const observedStoredText = toStorageText(this.#state);
     let restored;
     try {
       restored = await parseArchive(input, {
@@ -300,12 +304,24 @@ export class RecordVault {
       schemaVersion: RECORD_SCHEMA_VERSION,
       records: normalizeArchiveData(restored.data, RECORD_SCHEMA_VERSION).records,
     };
-    const before = toStorageText(this.#state);
+    if (observedGeneration !== this.#generation || observedStoredText !== toStorageText(this.#state)) {
+      fail('concurrent-modification', 'Records changed while the archive was being checked; import was not applied.');
+    }
+    let currentStoredText;
+    try {
+      currentStoredText = this.#storage.getItem(this.#storageKey);
+    } catch (error) {
+      fail('storage-read-failed', 'Could not confirm current records before import; nothing was replaced.', error);
+    }
+    if (currentStoredText !== observedStoredText) {
+      fail('concurrent-modification', 'Stored records changed in another context; import was not applied.');
+    }
     const after = toStorageText(nextState);
-    if (before === after) return { imported: nextState.records.length, changed: false };
+    if (observedStoredText === after) return { imported: nextState.records.length, changed: false };
 
     this.#writeState(nextState);
     this.#state = nextState;
+    this.#generation += 1;
     return { imported: nextState.records.length, changed: true };
   }
 }
