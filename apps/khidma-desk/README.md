@@ -17,7 +17,7 @@ Do not open the file directly via `file://`. The browser needs the module/import
 ## v0.1 workflow
 
 1. Add a customer (name required; phone and address optional).
-2. Create a job linked to that customer. Store an optional appointment and estimated amount in whole DZD.
+2. Create a job linked to that customer. Store an optional appointment and estimated amount in whole DZD; an estimate can also be added or increased later.
 3. Move a job through permitted status transitions.
 4. Record one or more manually entered payment notes (method, amount and optional reference).
 5. Export a JSON archive, clear disposable test data, and restore it.
@@ -30,6 +30,7 @@ Do not open the file directly via `file://`. The browser needs the module/import
 - Archive SHA-256 checks detect content mismatch with the included digest; they do not authenticate a sender. Anyone can recompute the digest.
 - Import is replace-all after confirmation. Files are treated as untrusted; format, app identity, integrity and domain invariants are checked before the one-key write.
 - The app detects storage changes observed during an import but does not provide general multi-tab merging, locking, or conflict resolution.
+- Estimates can be increased after recorded payments, but cannot be removed or lowered below the cumulative recorded amount. This keeps the prototype’s own payment-total rule consistent when work scope changes.
 - Payment entries are user-reported notes. The app does not process, receive, settle or verify payments.
 - Estimated amounts are not official invoices or quotes, and the app does not calculate tax, comply with accounting requirements or issue regulated documents.
 - This prototype has no multi-user access control, encryption, remote backup, audit-proof history, or tested recovery after browser data loss. Do not use it for sensitive or irreplaceable records.
