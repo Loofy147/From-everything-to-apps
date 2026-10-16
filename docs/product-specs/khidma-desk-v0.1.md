@@ -51,11 +51,11 @@ A self-employed service provider or tiny repair/installation business needs to k
 - [x] Status changes follow the transition matrix; terminal jobs cannot be reopened (domain tests).
 - [x] Estimated and paid amounts use non-negative whole-DZD integers; payment total cannot exceed the estimate (domain tests).
 - [x] An estimate can be added after job creation and safely increased after payment, but cannot be reduced below payments already recorded (domain and Chromium tests).
-- [ ] Creating/updating a customer or job persists only after localStorage confirms the write.
-- [x] Page reload restores a customer, job and payment record in Chromium; broader dataset recovery remains unverified.
+- [x] Chromium CI: a simulated localStorage quota error on customer creation preserves both the prior stored state and the visible customer list; successful writes persist through the same one-key commit path.
+- [x] Page reload restores a customer, job and payment record in Chromium; CI also restores a downloaded external backup after clearing all application localStorage. Manual recovery outside Chromium remains open.
 - [x] Valid archive restore round-trips the complete serialized customer/job/payment state in Chromium.
-- [ ] Corrupt, wrong-app, future-schema, oversize and domain-invalid imports are rejected without replacing stored data.
-- [ ] A storage write error and detected concurrent import change do not advance memory.
-- [x] Chromium e2e covers customer/job/payment, transitions, export/restore, tampered archive rejection and mobile layout in both French LTR and Arabic RTL.
-- [ ] Arabic RTL and French LTR views are keyboard accessible and usable at 390px.
+- [x] Chromium CI rejects tampered, wrong-app, future-schema, oversized and domain-invalid imports without replacing the pre-existing stored state.
+- [x] Chromium CI: a storage-write failure does not advance the visible or persisted customer state; a detected concurrent change during asynchronous import is preserved and the stale import is rejected.
+- [x] Chromium e2e covers customer/job/payment, transitions, exact archive round-trip, invalid import classes, storage errors/conflicts, application-localStorage wipe recovery, 390px French LTR and Arabic RTL layouts.
+- [ ] Keyboard interaction and focus-restoration checks, plus a screen-reader audit across French LTR, Arabic RTL and mixed-direction values, remain open for manual verification.
 - [ ] Manual testing with at least two browsers, local backup recovery and prospective-user workflow validation remain open before pilot.
