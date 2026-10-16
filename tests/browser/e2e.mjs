@@ -195,9 +195,13 @@ try {
 
   await evaluate("(() => { document.querySelector('#customer-name').value='Atelier Al Amal'; document.querySelector('#customer-phone').value='+213 555 123 456'; document.querySelector('#customer-address').value='Blida'; document.querySelector('#customer-form').requestSubmit(); return true; })()");
   await waitFor("JSON.parse(localStorage.getItem('khidma-desk.state.v1') || '{}').customers?.some(c => c.name === 'Atelier Al Amal')", 'Khidma customer save');
-  await evaluate("(() => { const select=document.querySelector('#job-customer'); select.value=select.options[1].value; document.querySelector('#job-title').value='Repair air conditioner'; document.querySelector('#job-description').value='Check replacement part'; document.querySelector('#job-estimate').value='12000'; document.querySelector('#job-form').requestSubmit(); return true; })()");
-  await waitFor("JSON.parse(localStorage.getItem('khidma-desk.state.v1') || '{}').jobs?.some(j => j.title === 'Repair air conditioner' && j.quotedAmountDzd === 12000 && j.status === 'quoted')", 'Khidma job creation');
-  console.log('PASS customer and estimated service job workflow');
+  await evaluate("(() => { const select=document.querySelector('#job-customer'); select.value=select.options[1].value; document.querySelector('#job-title').value='Repair air conditioner'; document.querySelector('#job-description').value='Check replacement part'; document.querySelector('#job-form').requestSubmit(); return true; })()");
+  await waitFor("JSON.parse(localStorage.getItem('khidma-desk.state.v1') || '{}').jobs?.some(j => j.title === 'Repair air conditioner' && j.quotedAmountDzd === null && j.status === 'requested')", 'Khidma job creation without estimate');
+  await evaluate("(() => { document.querySelector('.job-card button[data-action=estimate]').click(); document.querySelector('#estimate-amount').value='12000'; document.querySelector('#estimate-form').requestSubmit(); return true; })()");
+  await waitFor("JSON.parse(localStorage.getItem('khidma-desk.state.v1') || '{}').jobs?.some(j => j.title === 'Repair air conditioner' && j.quotedAmountDzd === 12000 && j.status === 'requested')", 'Khidma estimate added after job creation');
+  await evaluate("(() => { const select=document.querySelector('.job-card select'); select.value='quoted'; select.dispatchEvent(new Event('change',{bubbles:true})); return true; })()");
+  await waitFor("JSON.parse(localStorage.getItem('khidma-desk.state.v1') || '{}').jobs?.some(j => j.status === 'quoted')", 'Khidma quoted status');
+  console.log('PASS customer/job creation and estimate entry after creation');
 
   await evaluate("(() => { const select=document.querySelector('.job-card select'); select.value='scheduled'; select.dispatchEvent(new Event('change',{bubbles:true})); return true; })()");
   await waitFor("JSON.parse(localStorage.getItem('khidma-desk.state.v1') || '{}').jobs?.some(j => j.status === 'scheduled')", 'Khidma status transition');
