@@ -4,11 +4,15 @@
   "private": true,
   "description": "Independently engineered, durable and portable apps built from carefully evaluated software capabilities.",
   "license": "MIT",
-  "engines": { "node": ">=22.12" },
-  "workspaces": ["packages/*"],
+  "engines": {
+    "node": ">=22.12"
+  },
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "test": "node --test packages/*/test/*.test.js",
     "test:portable-archive": "node --test packages/portable-archive/test/*.test.js",
-    "check": "npm test"
+    "check": "npm test && node --check packages/portable-archive/src/index.js && node --check packages/record-vault/src/index.js && node --input-type=module --check < apps/archive-lab/main.js"
   }
 }
