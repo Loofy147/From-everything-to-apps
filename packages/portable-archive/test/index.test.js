@@ -150,3 +150,12 @@ test('wraps migration exceptions and rejects invalid migration options', async (
   await expectCode(parseArchive(archive, { targetSchemaVersion: 2, migrations: { 1: () => { throw new Error('boom'); } } }), 'migration-failed');
   await expectCode(parseArchive(archive, { migrations: [] }), 'invalid-options');
 });
+
+import * as packageEntry from '@from-everything-to-apps/portable-archive';
+
+test('exposes the supported public API through the workspace package entry', () => {
+  assert.equal(packageEntry.createArchive, createArchive);
+  assert.equal(packageEntry.parseArchive, parseArchive);
+  assert.equal(packageEntry.stringifyArchive, stringifyArchive);
+  assert.equal(packageEntry.ARCHIVE_FORMAT, ARCHIVE_FORMAT);
+});
