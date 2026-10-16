@@ -7,6 +7,13 @@
   <meta name="description" content="A personal workspace for independently built apps, shared capabilities and service integrations.">
   <title>Personal OS — From Everything to Apps</title>
   <link rel="stylesheet" href="./styles.css">
+  <script type="importmap">
+    {
+      "imports": {
+        "@from-everything-to-apps/portable-archive": "../../packages/portable-archive/src/index.js"
+      }
+    }
+  </script>
   <script type="module" src="./main.js"></script>
 </head>
 <body>
@@ -23,6 +30,13 @@
         <button type="button" data-nav="integrations" class="nav-item"><span aria-hidden="true">⌘</span> Integrations <span id="integration-nav-count" class="nav-count">0</span></button>
         <button type="button" data-nav="architecture" class="nav-item"><span aria-hidden="true">⌬</span> System map</button>
       </nav>
+      <div class="app-subnav" aria-label="Apps inside Personal OS">
+        <p class="sidebar-label">PERSONAL APPS</p>
+        <button type="button" data-nav="notes" class="nav-item subnav-item"><span aria-hidden="true">✎</span> Notes & Knowledge <span id="notes-nav-count" class="nav-count">0</span></button>
+        <button type="button" data-nav="board" class="nav-item subnav-item"><span aria-hidden="true">▤</span> Work Board <span id="tasks-nav-count" class="nav-count">0</span></button>
+        <button type="button" data-nav="research" class="nav-item subnav-item"><span aria-hidden="true">⌕</span> Research Library <span id="research-nav-count" class="nav-count">0</span></button>
+        <button type="button" data-nav="data" class="nav-item subnav-item"><span aria-hidden="true">↧</span> Backup & Data</button>
+      </div>
       <div class="sidebar-spacer"></div>
       <section class="sidebar-status" aria-labelledby="workspace-status-title">
         <span class="status-dot" aria-hidden="true"></span>
@@ -171,7 +185,92 @@
         <section class="boundary-note"><div class="boundary-icon" aria-hidden="true">✓</div><div><strong>Independence rule</strong><p>Prefer standard formats and protocols (HTTP/OAuth, JSON, PostgreSQL, OpenAPI, webhooks). Vendor SDKs stay behind interfaces so each provider can be replaced without rewriting app domain logic.</p></div></section>
       </section>
 
-      <footer class="main-footer"><span>Personal OS · privately operated prototype</span><span>Local shortcut storage · no account service configured</span></footer>
+      <section id="view-notes" class="view" aria-labelledby="notes-title" hidden>
+        <div class="view-heading"><div><p class="eyebrow">PERSONAL KNOWLEDGE</p><h1 id="notes-title">Notes & Knowledge</h1><p class="lede">Capture working notes, keep important context visible, and find it again without a separate service.</p></div><span class="local-pill"><span class="status-dot" aria-hidden="true"></span> Stored on this device</span></div>
+        <div class="workspace-columns">
+          <form id="note-form" class="panel app-form">
+            <div class="panel-title"><div><p class="eyebrow">NOTE EDITOR</p><h2 id="note-form-title">New note</h2></div><button id="note-cancel-edit" class="text-link" type="button" hidden>Cancel edit</button></div>
+            <input id="note-id" type="hidden">
+            <label for="note-title">Title *</label><input id="note-title" name="title" required maxlength="140" autocomplete="off" placeholder="A useful idea or decision">
+            <label for="note-tags">Tags</label><input id="note-tags" name="tags" maxlength="160" placeholder="work, product, learning">
+            <label for="note-body">Content *</label><textarea id="note-body" name="body" rows="8" required maxlength="30000" placeholder="Write a note, plan, observation or reusable context…"></textarea>
+            <label class="check-row"><input id="note-pinned" type="checkbox"> Pin this note</label>
+            <div class="form-actions"><button class="button button-primary" type="submit">Save note</button><button id="note-reset" class="button button-secondary" type="button">Clear form</button></div>
+          </form>
+          <section class="panel collection-panel" aria-labelledby="notes-collection-heading">
+            <div class="panel-title"><div><p class="eyebrow">YOUR COLLECTION</p><h2 id="notes-collection-heading">Saved notes</h2></div><span id="notes-count" class="count">0</span></div>
+            <label for="notes-search">Filter notes</label><input id="notes-search" type="search" placeholder="Search titles, tags and content…">
+            <div id="notes-list" class="collection-list"><p class="empty-state">No notes yet. Add one to begin.</p></div>
+          </section>
+        </div>
+      </section>
+
+      <section id="view-board" class="view" aria-labelledby="board-title" hidden>
+        <div class="view-heading"><div><p class="eyebrow">PROJECT EXECUTION</p><h1 id="board-title">Work Board</h1><p class="lede">Keep projects, next actions, priorities and due dates together. This is a personal task workspace, not a team sync service.</p></div><span class="local-pill"><span class="status-dot" aria-hidden="true"></span> Local project space</span></div>
+        <div class="workspace-columns board-setup">
+          <form id="project-form" class="panel app-form">
+            <div class="panel-title"><div><p class="eyebrow">WORKSTREAMS</p><h2>New project</h2></div><span id="projects-count" class="count">0</span></div>
+            <label for="project-name">Project name *</label><input id="project-name" required maxlength="100" placeholder="e.g. Personal OS">
+            <label for="project-description">Outcome / description</label><textarea id="project-description" rows="2" maxlength="1000" placeholder="What outcome should this project deliver?"></textarea>
+            <button class="button button-secondary" type="submit">Add project</button>
+            <div id="project-list" class="project-list"><p class="empty-state">No projects yet.</p></div>
+          </form>
+          <form id="task-form" class="panel app-form">
+            <div class="panel-title"><div><p class="eyebrow">NEXT ACTION</p><h2 id="task-form-title">Add a task</h2></div><button id="task-cancel-edit" class="text-link" type="button" hidden>Cancel edit</button></div>
+            <input id="task-id" type="hidden">
+            <label for="task-title">Task *</label><input id="task-title" required maxlength="180" placeholder="A clear, executable next step">
+            <label for="task-project">Project</label><select id="task-project"><option value="">No project</option></select>
+            <div class="form-two-cols"><div><label for="task-priority">Priority</label><select id="task-priority"><option value="normal">Normal</option><option value="high">High</option><option value="low">Low</option></select></div><div><label for="task-due">Due date</label><input id="task-due" type="date"></div></div>
+            <label for="task-notes">Details</label><textarea id="task-notes" rows="3" maxlength="4000" placeholder="Acceptance criteria, blockers or context"></textarea>
+            <div class="form-actions"><button class="button button-primary" type="submit">Save task</button><button id="task-reset" class="button button-secondary" type="button">Clear form</button></div>
+          </form>
+        </div>
+        <div class="board-heading"><div><p class="eyebrow">EXECUTION BOARD</p><h2>Task flow</h2></div><span id="board-summary" class="muted-count">0 tasks</span></div>
+        <div class="task-board">
+          <section class="task-column" data-task-status="todo"><div class="column-heading"><h3>Next</h3><span id="todo-count" class="count">0</span></div><div id="todo-tasks" class="task-list"></div></section>
+          <section class="task-column" data-task-status="doing"><div class="column-heading"><h3>In progress</h3><span id="doing-count" class="count">0</span></div><div id="doing-tasks" class="task-list"></div></section>
+          <section class="task-column" data-task-status="done"><div class="column-heading"><h3>Done</h3><span id="done-count" class="count">0</span></div><div id="done-tasks" class="task-list"></div></section>
+        </div>
+      </section>
+
+      <section id="view-research" class="view" aria-labelledby="research-title" hidden>
+        <div class="view-heading"><div><p class="eyebrow">RESEARCH WORKBENCH</p><h1 id="research-title">Research Library</h1><p class="lede">Collect source links and decision-ready summaries. Store what you learned, not only a pile of URLs.</p></div><span class="local-pill"><span class="status-dot" aria-hidden="true"></span> Private to this browser</span></div>
+        <div class="workspace-columns research-layout">
+          <form id="research-form" class="panel app-form">
+            <div class="panel-title"><div><p class="eyebrow">SOURCE CARD</p><h2 id="research-form-title">Save research</h2></div><button id="research-cancel-edit" class="text-link" type="button" hidden>Cancel edit</button></div>
+            <input id="research-id" type="hidden">
+            <label for="research-title-input">Title *</label><input id="research-title-input" required maxlength="180" placeholder="What did you investigate?">
+            <label for="research-url">Source URL</label><input id="research-url" type="url" maxlength="1000" placeholder="https://…">
+            <label for="research-status">Review state</label><select id="research-status"><option value="to-review">To review</option><option value="reviewed">Reviewed</option><option value="actionable">Actionable</option></select>
+            <label for="research-tags">Topics / tags</label><input id="research-tags" maxlength="180" placeholder="backend, automation, licensing">
+            <label for="research-summary">Notes & findings</label><textarea id="research-summary" rows="6" maxlength="20000" placeholder="Summarize evidence, limitations, license, next action…"></textarea>
+            <div class="form-actions"><button class="button button-primary" type="submit">Save source</button><button id="research-reset" class="button button-secondary" type="button">Clear form</button></div>
+          </form>
+          <section class="panel collection-panel" aria-labelledby="research-collection-heading">
+            <div class="panel-title"><div><p class="eyebrow">SAVED EVIDENCE</p><h2 id="research-collection-heading">Research items</h2></div><span id="research-count" class="count">0</span></div>
+            <div class="research-filters"><label for="research-search">Search library</label><input id="research-search" type="search" placeholder="Search title, source, tags or findings…"><label for="research-state-filter">Review state</label><select id="research-state-filter"><option value="all">All states</option><option value="to-review">To review</option><option value="reviewed">Reviewed</option><option value="actionable">Actionable</option></select></div>
+            <div id="research-list" class="collection-list"><p class="empty-state">No research items yet.</p></div>
+          </section>
+        </div>
+      </section>
+
+      <section id="view-data" class="view" aria-labelledby="data-title" hidden>
+        <div class="view-heading"><div><p class="eyebrow">PORTABILITY & RECOVERY</p><h1 id="data-title">Backup & Data</h1><p class="lede">Export or restore the data owned by the Personal OS modules. Backups are integrity-checked, not encrypted, and remain your responsibility.</p></div></div>
+        <div class="data-summary-grid">
+          <article class="metric-card"><div class="metric-icon icon-violet">✎</div><div><span>Notes</span><strong id="data-note-count">0</strong><small>Personal knowledge</small></div></article>
+          <article class="metric-card"><div class="metric-icon icon-blue">▤</div><div><span>Tasks</span><strong id="data-task-count">0</strong><small>Personal work queue</small></div></article>
+          <article class="metric-card"><div class="metric-icon icon-lime">⌕</div><div><span>Research items</span><strong id="data-research-count">0</strong><small>Saved sources</small></div></article>
+          <article class="metric-card"><div class="metric-icon icon-amber">▱</div><div><span>Projects</span><strong id="data-project-count">0</strong><small>Workstreams</small></div></article>
+        </div>
+        <div class="data-action-grid">
+          <article class="panel data-action-card"><div class="data-action-icon">↧</div><h2>Export backup</h2><p>Download a versioned JSON archive of notes, projects, tasks and research, with a SHA-256 integrity digest.</p><button id="export-suite-backup" class="button button-primary" type="button">Download backup</button></article>
+          <article class="panel data-action-card"><div class="data-action-icon">↥</div><h2>Restore backup</h2><p>Verify archive format, checksum, schema and every record before replacing the current Personal OS app data.</p><label class="button button-secondary file-button" for="import-suite-backup">Choose backup file</label><input id="import-suite-backup" type="file" accept=".json,application/json" hidden><p id="backup-file-status" class="field-hint">Current data remains unchanged unless validation and the storage write both succeed.</p></article>
+          <article class="panel data-action-card"><div class="data-action-icon">⌫</div><h2>Clear app data</h2><p>Remove this browser’s Notes, Work Board and Research Library records. This cannot be undone without an exported backup.</p><button id="clear-suite-data" class="button button-secondary" type="button">Clear app data…</button></article>
+        </div>
+        <div class="boundary-note"><div class="boundary-icon" aria-hidden="true">!</div><div><strong>Personal prototype, not secure vault storage</strong><p>Data uses browser localStorage without encryption, account protection or cloud sync. Do not store passwords, authentication tokens, or sensitive customer records. An SHA-256 checksum detects accidental archive modification; it does not authenticate the author or protect confidentiality.</p></div></div>
+      </section>
+
+      <footer class="main-footer"><span>Personal OS · privately operated prototype</span><span>Local personal-app data · no backend configured</span></footer>
     </main>
   </div>
 
