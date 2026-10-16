@@ -692,6 +692,249 @@ function handleCollectionAction(event) {
   }
 }
 
+
+function getDocument(id) { return state.documents.find((item) => item.id === id); }
+function getMediaProject(id) { return state.media.find((item) => item.id === id); }
+
+function resetDocumentForm() {
+  $('#document-form').reset();
+  $('#document-id').value = '';
+  $('#document-format').value = 'md';
+  $('#document-form-title').textContent = 'New document';
+  $('#document-cancel-edit').hidden = true;
+  $('#document-size-hint').textContent = 'Maximum 50,000 characters per document.';
+}
+
+function editDocument(id) {
+  const item = getDocument(id);
+  if (!item) return;
+  $('#document-id').value = item.id;
+  $('#document-title').value = item.title;
+  $('#document-format').value = item.format;
+  $('#document-tags').value = item.tags.join(', ');
+  $('#document-content').value = item.content;
+  $('#document-form-title').textContent = 'Edit document';
+  $('#document-cancel-edit').hidden = false;
+  $('#document-size-hint').textContent = item.content.length + ' / 50,000 characters.';
+  $('#document-title').focus();
+  $('#document-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function submitDocument(event) {
+  event.preventDefault();
+  const title = $('#document-title').value.trim();
+  const body = $('#document-content').value;
+  if (!title || !body.trim()) {
+    announce('Add a file name and some document content before saving.', 'error');
+    return;
+  }
+  const now = new Date().toISOString();
+  const old = getDocument($('#document-id').value);
+  const item = {
+    id: old?.id || newId(),
+    title: title.replace(/\.(md|txt)$/i, ''),
+    format: $('#document-format').value,
+    content: body,
+    tags: parseTags($('#document-tags').value),
+    createdAt: old?.createdAt || now,
+    updatedAt: now,
+  };
+  if (writeState({ ...state, documents: old ? state.documents.map((record) => record.id === old.id ? item : record) : [item, ...state.documents] },
+    { successMessage: old ? 'Document updated.' : 'Document saved in Files & Documents.' })) resetDocumentForm();
+}
+
+function safeFilename(title) {
+  const cleaned = String(title || 'document').normalize('NFKC').replace(/[^a-zA-Z0-9._-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 90);
+  return cleaned || 'document';
+}
+
+function downloadDocument(id) {
+  const item = getDocument(id);
+  if (!item) return;
+  const blob = new Blob([item.content], { type: item.format === 'md' ? 'text/markdown;charset=utf-8' : 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = element('a', '', '');
+  link.href = url;
+  link.download = safeFilename(item.title) + '.' + item.format;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  announce('Downloaded ' + item.title + '.' + item.format + '.', 'success');
+}
+
+function renderDocuments() {
+  const filter = $('#documents-search').value.trim().toLocaleLowerCase();
+  const records = [...state.documents].sort(whenUpdated).filter((item) =>
+    !filter || [item.title, item.content, ...item.tags].join(' ').toLocaleLowerCase().includes(filter));
+  const host = $('#documents-list');
+  host.replaceChildren();
+  if (!records.length) host.append(emptyMessage(filter ? 'No documents match this search.' : 'No documents yet. Import a Markdown/text file or create one.'));
+  for (const item of records) {
+    const card = element('article', 'collection-card document-card');
+    const header = element('div', 'collection-card-header');
+    const heading = element('div', 'collection-title-wrap');
+    heading.append(element('h3', '', item.title + '.' + item.format));
+    heading.append(element('span', 'small-muted', item.content.length + ' characters · Updated ' + new Date(item.updatedAt).toLocaleDateString()));
+    header.append(heading);
+    const actions = element('div', 'card-actions');
+    actions.append(button('Edit', 'document-edit', item.id));
+    actions.append(button('Download', 'document-download', item.id));
+    actions.append(button('Delete', 'document-delete', item.id, 'small-action danger-action'));
+    header.append(actions);
+    card.append(header, element('p', 'document-preview', item.content.slice(0, 260) + (item.content.length > 260 ? '…' : '')));
+    if (item.tags.length) {
+      const tags = element('div', 'tag-row');
+      makeTags(tags, item.tags);
+      card.append(tags);
+    }
+    host.append(card);
+  }
+  $('#documents-count').textContent = String(state.documents.length);
+  $('#files-nav-count').textContent = String(state.documents.length);
+}
+
+async function loadTextFile(file) {
+  if (!file) return;
+  const lowerName = file.name.toLocaleLowerCase();
+  const format = lowerName.endsWith('.md') ? 'md' : lowerName.endsWith('.txt') ? 'txt' : null;
+  if (!format || file.size > 100_000) {
+    announce('Import only .md or .txt files up to 100 KB. Current documents were not changed.', 'error');
+    $('#document-import').value = '';
+    return;
+  }
+  try {
+    const text = await file.text();
+    if (text.includes(String.fromCharCode(0))) throw new Error('Binary files are not supported.');
+    $('#document-id').value = '';
+    $('#document-title').value = file.name.replace(/\.(md|txt)$/i, '').slice(0, 140);
+    $('#document-format').value = format;
+    $('#document-content').value = text.slice(0, 50000);
+    $('#document-tags').value = '';
+    $('#document-form-title').textContent = 'Review imported document';
+    $('#document-cancel-edit').hidden = true;
+    $('#document-size-hint').textContent = text.length + ' characters loaded. Review and save to keep it in the library.';
+    $('#document-import').value = '';
+    $('#document-title').focus();
+    announce('File loaded into the editor. It is not saved until you select Save document.', 'success');
+  } catch (error) {
+    announce('Document import failed: ' + (error.message || 'unknown error'), 'error');
+    $('#document-import').value = '';
+  }
+}
+
+function renderMedia() {
+  const filter = $('#media-search').value.trim().toLocaleLowerCase();
+  const records = [...state.media].sort(whenUpdated).filter((item) =>
+    !filter || [item.title, item.brief, item.notes, item.format, item.stage, item.outputUrl || '', ...item.tags].join(' ').toLocaleLowerCase().includes(filter));
+  const host = $('#media-list');
+  host.replaceChildren();
+  if (!records.length) host.append(emptyMessage(filter ? 'No media projects match this search.' : 'No media projects yet. Add a brief to begin.'));
+  const stages = [
+    ['brief', 'Brief'], ['script', 'Script'], ['assets', 'Assets'], ['edit', 'Editing'], ['review', 'Review'], ['done', 'Done'],
+  ];
+  const summary = $('#media-stage-summary');
+  summary.replaceChildren();
+  for (const [stage, label] of stages) {
+    const count = state.media.filter((item) => item.stage === stage).length;
+    summary.append(element('span', 'media-stage-pill stage-' + stage, label + ' ' + count));
+  }
+  for (const item of records) {
+    const card = element('article', 'collection-card media-card');
+    const header = element('div', 'collection-card-header');
+    const heading = element('div', 'collection-title-wrap');
+    heading.append(element('h3', '', item.title));
+    heading.append(element('span', 'small-muted', item.format === 'short-video' ? 'Short video / Reel' : item.format === 'advertisement' ? 'Advertisement' : item.format === 'product-demo' ? 'Product demo' : item.format === 'presentation' ? 'Presentation' : item.format === 'audio' ? 'Audio / voice' : 'Other'));
+    header.append(heading);
+    const actions = element('div', 'card-actions');
+    actions.append(button('Edit', 'media-edit', item.id));
+    actions.append(button('Delete', 'media-delete', item.id, 'small-action danger-action'));
+    header.append(actions);
+    card.append(header, element('p', 'collection-body', item.brief));
+    if (item.notes) {
+      const next = element('div', 'media-next-action');
+      next.append(element('strong', '', 'Next action'), element('p', '', item.notes));
+      card.append(next);
+    }
+    if (item.outputUrl) card.append(externalLink(item.outputUrl, 'Open deliverable ↗'));
+    if (item.tags.length) {
+      const tags = element('div', 'tag-row');
+      makeTags(tags, item.tags);
+      card.append(tags);
+    }
+    const footer = element('div', 'research-card-footer');
+    const label = element('label', 'inline-select-label', 'Stage');
+    const select = element('select', 'inline-state-select');
+    select.dataset.action = 'media-stage';
+    select.dataset.id = item.id;
+    select.setAttribute('aria-label', 'Production stage for ' + item.title);
+    for (const [stage, name] of stages) select.add(new Option(name, stage));
+    select.value = item.stage;
+    label.append(select);
+    footer.append(label, element('span', 'small-muted', 'Updated ' + new Date(item.updatedAt).toLocaleDateString()));
+    card.append(footer);
+    host.append(card);
+  }
+  $('#media-count').textContent = String(state.media.length);
+  $('#media-nav-count').textContent = String(state.media.length);
+}
+
+function resetMediaForm() {
+  $('#media-form').reset();
+  $('#media-id').value = '';
+  $('#media-format').value = 'short-video';
+  $('#media-stage').value = 'brief';
+  $('#media-form-title').textContent = 'New media project';
+  $('#media-cancel-edit').hidden = true;
+}
+
+function editMediaProject(id) {
+  const item = getMediaProject(id);
+  if (!item) return;
+  $('#media-id').value = item.id;
+  $('#media-project-title').value = item.title;
+  $('#media-format').value = item.format;
+  $('#media-stage').value = item.stage;
+  $('#media-brief').value = item.brief;
+  $('#media-next-action').value = item.notes;
+  $('#media-output-url').value = item.outputUrl || '';
+  $('#media-tags').value = item.tags.join(', ');
+  $('#media-form-title').textContent = 'Edit media project';
+  $('#media-cancel-edit').hidden = false;
+  $('#media-project-title').focus();
+  $('#media-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function submitMediaProject(event) {
+  event.preventDefault();
+  const title = $('#media-project-title').value.trim();
+  const brief = $('#media-brief').value.trim();
+  const outputUrl = $('#media-output-url').value.trim();
+  if (!title || !brief) return;
+  if (!validSourceUrl(outputUrl)) {
+    announce('Deliverable URL must use HTTP or HTTPS and must not contain embedded credentials.', 'error');
+    $('#media-output-url').focus();
+    return;
+  }
+  const now = new Date().toISOString();
+  const old = getMediaProject($('#media-id').value);
+  const item = {
+    id: old?.id || newId(),
+    title,
+    format: $('#media-format').value,
+    stage: $('#media-stage').value,
+    brief,
+    notes: $('#media-next-action').value.trim(),
+    outputUrl: outputUrl || null,
+    tags: parseTags($('#media-tags').value),
+    createdAt: old?.createdAt || now,
+    updatedAt: now,
+  };
+  if (writeState({ ...state, media: old ? state.media.map((record) => record.id === old.id ? item : record) : [item, ...state.media] },
+    { successMessage: old ? 'Media project updated.' : 'Media project added to the production queue.' })) resetMediaForm();
+}
+
+
 export async function bootPersonalApps() {
   loadState();
   $('#note-form').addEventListener('submit', submitNote);
