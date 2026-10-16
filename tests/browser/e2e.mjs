@@ -187,7 +187,11 @@ try {
   const khidmaUrl = new URL('/apps/khidma-desk/', web.url).toString();
   await cdp.send('Page.navigate', { url: khidmaUrl }, session);
   await waitFor("document.readyState === 'complete' && document.querySelector('#status')?.dataset.ready === 'true'", 'Khidma Desk boot');
-  console.log('PASS Khidma Desk boots with a local schema-validated store');
+  const frenchDimensions = await evaluate("({lang:document.documentElement.lang,dir:document.documentElement.dir,width:window.innerWidth,scrollWidth:document.documentElement.scrollWidth})");
+  assert.equal(frenchDimensions.lang, 'fr');
+  assert.equal(frenchDimensions.dir, 'ltr');
+  assert.ok(frenchDimensions.scrollWidth <= frenchDimensions.width, 'French mobile layout overflow: viewport ' + frenchDimensions.width + ', document ' + frenchDimensions.scrollWidth);
+  console.log('PASS Khidma Desk boots locally with a non-overflowing French LTR layout');
 
   await evaluate("(() => { document.querySelector('#customer-name').value='Atelier Al Amal'; document.querySelector('#customer-phone').value='+213 555 123 456'; document.querySelector('#customer-address').value='Blida'; document.querySelector('#customer-form').requestSubmit(); return true; })()");
   await waitFor("JSON.parse(localStorage.getItem('khidma-desk.state.v1') || '{}').customers?.some(c => c.name === 'Atelier Al Amal')", 'Khidma customer save');
@@ -205,6 +209,7 @@ try {
   console.log('PASS status transition, manual payment and reload persistence');
 
   await evaluate("document.querySelector('#export').click(); true");
+  const khidmaStateBeforeExport = await evaluate("localStorage.getItem('khidma-desk.state.v1')");
   const khidmaArchivePath = await until(async () => {
     const names = await readdir(downloads);
     const completed = names.filter((name) => name.startsWith('khidma-desk-') && name.endsWith('.json'));
@@ -221,7 +226,8 @@ try {
   const khidmaImportEvent = "(async () => { const input=document.querySelector('#import-file'); const dt=new DataTransfer(); dt.items.add(new File([" + JSON.stringify(khidmaArchiveText) + "], 'khidma-backup.json', {type:'application/json'})); input.files=dt.files; input.dispatchEvent(new Event('change',{bubbles:true})); return true; })()";
   await evaluate(khidmaImportEvent);
   await waitFor("JSON.parse(localStorage.getItem('khidma-desk.state.v1') || '{}').jobs?.some(j => j.title === 'Repair air conditioner' && j.payments?.length === 1)", 'Khidma restore');
-  console.log('PASS Khidma export, clear and full restore');
+  assert.equal(await evaluate("localStorage.getItem('khidma-desk.state.v1')"), khidmaStateBeforeExport, 'All customer, job, status and payment fields must round-trip without change.');
+  console.log('PASS Khidma export, clear and exact full-state restore');
 
   const invalidKhidmaArchive = JSON.stringify({ ...khidmaArchive, data: { ...khidmaArchive.data, jobs: khidmaArchive.data.jobs.map((job) => ({ ...job, title: 'Tampered job' })) } });
   const khidmaStateBeforeInvalid = await evaluate("localStorage.getItem('khidma-desk.state.v1')");
