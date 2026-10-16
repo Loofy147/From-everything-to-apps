@@ -194,6 +194,67 @@ try {
   await cdp.send('Emulation.clearDeviceMetricsOverride', {}, session);
   console.log('PASS Personal OS custom shortcut save/reload/remove, URL validation, theme persistence and 390px layout');
 
+  await evaluate("document.querySelector('[data-nav=notes]').click(); true");
+  await waitFor("!document.querySelector('#view-notes')?.hidden", 'Notes & Knowledge view');
+  await evaluate("(() => { document.querySelector('#note-title').value='E2E product principle'; document.querySelector('#note-tags').value='product, decisions'; document.querySelector('#note-body').value='Keep each app small, testable and portable.'; document.querySelector('#note-form').requestSubmit(); return true; })()");
+  await waitFor("JSON.parse(localStorage.getItem('personal-os.suite-data.v1') || '{}').notes?.length === 1 && document.querySelector('#notes-list .note-card h3')?.textContent === 'E2E product principle'", 'Personal OS note create and persistence');
+  await evaluate("document.querySelector('#notes-list button[data-action=note-pin]').click(); true");
+  await waitFor("JSON.parse(localStorage.getItem('personal-os.suite-data.v1') || '{}').notes?.[0]?.pinned === true", 'Personal OS pin note');
+
+  await evaluate("document.querySelector('[data-nav=board]').click(); true");
+  await waitFor("!document.querySelector('#view-board')?.hidden", 'Work Board view');
+  await evaluate("(() => { document.querySelector('#project-name').value='E2E Personal OS'; document.querySelector('#project-description').value='Build and verify internal apps.'; document.querySelector('#project-form').requestSubmit(); return true; })()");
+  await waitFor("JSON.parse(localStorage.getItem('personal-os.suite-data.v1') || '{}').projects?.length === 1 && document.querySelector('#project-list').textContent.includes('E2E Personal OS')", 'Work Board project create');
+  await evaluate("(() => { const data=JSON.parse(localStorage.getItem('personal-os.suite-data.v1')); document.querySelector('#task-title').value='Verify app recovery'; document.querySelector('#task-project').value=data.projects[0].id; document.querySelector('#task-priority').value='high'; document.querySelector('#task-notes').value='Export, clear, restore and compare.'; document.querySelector('#task-form').requestSubmit(); return true; })()");
+  await waitFor("JSON.parse(localStorage.getItem('personal-os.suite-data.v1') || '{}').tasks?.length === 1 && document.querySelector('#todo-tasks').textContent.includes('Verify app recovery')", 'Work Board task create');
+  await evaluate("document.querySelector('#todo-tasks button[data-action=task-advance]').click(); true");
+  await waitFor("JSON.parse(localStorage.getItem('personal-os.suite-data.v1') || '{}').tasks?.[0]?.status === 'doing'", 'Work Board start task');
+  await evaluate("document.querySelector('#doing-tasks button[data-action=task-advance]').click(); true");
+  await waitFor("JSON.parse(localStorage.getItem('personal-os.suite-data.v1') || '{}').tasks?.[0]?.status === 'done' && document.querySelector('#done-tasks').textContent.includes('Verify app recovery')", 'Work Board task completion');
+
+  await evaluate("document.querySelector('[data-nav=research]').click(); true");
+  await waitFor("!document.querySelector('#view-research')?.hidden", 'Research Library view');
+  await evaluate("(() => { document.querySelector('#research-title-input').value='Research test source'; document.querySelector('#research-url').value='javascript:alert(1)'; document.querySelector('#research-summary').value='This URL must be rejected.'; document.querySelector('#research-form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})); return true; })()");
+  await waitFor("document.querySelector('#global-status')?.dataset.kind === 'error' && document.querySelector('#global-status')?.textContent.includes('HTTP or HTTPS')", 'Research Library unsafe URL rejection');
+  assert.equal(await evaluate("JSON.parse(localStorage.getItem('personal-os.suite-data.v1') || '{}').research?.length"), 0, 'Unsafe source URL must not be persisted.');
+  await evaluate("(() => { document.querySelector('#research-url').value='https://example.com/architecture'; document.querySelector('#research-status').value='actionable'; document.querySelector('#research-tags').value='architecture, evidence'; document.querySelector('#research-summary').value='Capture decisions with source links and explicit limitations.'; document.querySelector('#research-form').requestSubmit(); return true; })()");
+  await waitFor("JSON.parse(localStorage.getItem('personal-os.suite-data.v1') || '{}').research?.length === 1 && document.querySelector('#research-list').textContent.includes('Research test source')", 'Research Library save and persistence');
+
+  async function uploadPersonalOsBackup(text, filename) {
+    const expression = "(async () => { const input=document.querySelector('#import-suite-backup'); const dt=new DataTransfer(); dt.items.add(new File([" + JSON.stringify(text) + "], " + JSON.stringify(filename) + ", {type:'application/json'})); input.files=dt.files; input.dispatchEvent(new Event('change',{bubbles:true})); return true; })()";
+    await evaluate(expression);
+  }
+  await evaluate("document.querySelector('[data-nav=data]').click(); true");
+  await waitFor("!document.querySelector('#view-data')?.hidden", 'Backup & Data view');
+  await evaluate("document.querySelector('#export-suite-backup').click(); true");
+  const backupName = await until(async () => {
+    const files = await readdir(downloads);
+    return files.find((name) => name.startsWith('personal-os-backup-') && !name.endsWith('.crdownload'));
+  }, 'Personal OS backup download', 15000);
+  const backupText = await readFile(path.join(downloads, backupName), 'utf8');
+  const archive = JSON.parse(backupText);
+  assert.equal(archive.format, 'from-everything-to-apps/portable-archive');
+  assert.equal(archive.appId, 'personal-os');
+  assert.equal(archive.data.notes.length, 1);
+  assert.equal(archive.data.projects.length, 1);
+  assert.equal(archive.data.tasks.length, 1);
+  assert.equal(archive.data.research.length, 1);
+  console.log('PASS Personal OS data export produces a versioned SHA-256 archive of all internal-app data');
+
+  const beforeTamperedImport = await evaluate("localStorage.getItem('personal-os.suite-data.v1')");
+  const tamperedArchive = JSON.parse(backupText);
+  tamperedArchive.data.notes[0].title = 'TAMPERED TITLE';
+  await uploadPersonalOsBackup(JSON.stringify(tamperedArchive), 'tampered-personal-os.json');
+  await waitFor("document.querySelector('#global-status')?.dataset.kind === 'error' && document.querySelector('#global-status')?.textContent.includes('Backup rejected')", 'tampered Personal OS backup rejection');
+  assert.equal(await evaluate("localStorage.getItem('personal-os.suite-data.v1')"), beforeTamperedImport, 'A tampered backup must not overwrite current Personal OS data.');
+  console.log('PASS tampered Personal OS archive is rejected without overwriting data');
+
+  await evaluate("document.querySelector('#clear-suite-data').click(); true");
+  await waitFor("JSON.parse(localStorage.getItem('personal-os.suite-data.v1') || '{}').notes?.length === 0 && JSON.parse(localStorage.getItem('personal-os.suite-data.v1') || '{}').tasks?.length === 0", 'Personal OS clear app data');
+  await uploadPersonalOsBackup(backupText, 'personal-os-backup-verified.json');
+  await waitFor("JSON.parse(localStorage.getItem('personal-os.suite-data.v1') || '{}').notes?.length === 1 && JSON.parse(localStorage.getItem('personal-os.suite-data.v1') || '{}').projects?.length === 1 && JSON.parse(localStorage.getItem('personal-os.suite-data.v1') || '{}').tasks?.[0]?.status === 'done' && JSON.parse(localStorage.getItem('personal-os.suite-data.v1') || '{}').research?.length === 1", 'Personal OS verified backup restoration', 15000);
+  console.log('PASS Personal OS backup restores Notes, Projects, Tasks and Research after clearing the suite data');
+
   await cdp.send('Page.navigate', { url: web.url }, session);
   await waitFor("document.readyState === 'complete' && document.querySelector('#status')?.textContent.includes('Local record store ready')", 'Archive Lab boot');
   console.log('PASS browser boot and local store initialization');
