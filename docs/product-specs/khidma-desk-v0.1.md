@@ -50,6 +50,7 @@ A self-employed service provider or tiny repair/installation business needs to k
 - [x] A job must reference an existing customer (domain tests).
 - [x] Status changes follow the transition matrix; terminal jobs cannot be reopened (domain tests).
 - [x] Estimated and paid amounts use non-negative whole-DZD integers; payment total cannot exceed the estimate (domain tests).
+- [x] An estimate can be added after job creation and safely increased after payment, but cannot be reduced below payments already recorded (domain and Chromium tests).
 - [ ] Creating/updating a customer or job persists only after localStorage confirms the write.
 - [x] Page reload restores a customer, job and payment record in Chromium; broader dataset recovery remains unverified.
 - [x] Valid archive restore round-trips the complete serialized customer/job/payment state in Chromium.
