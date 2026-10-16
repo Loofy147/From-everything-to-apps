@@ -23,7 +23,7 @@ The shell is static HTML/CSS/JavaScript and can be deployed as a Git-connected s
 ## Layered architecture
 
 1. **Personal shell.** App launch, search, navigation, feature status, capability catalog and external-service links. It stores only local shortcut metadata and a theme preference.
-2. **Domain apps.** Each app owns its domain schema, validation, UX and acceptance tests. No app imports another app's internal code.
+2. **Domain apps.** Each app owns its domain schema, validation, UX and acceptance tests. No app imports another app's internal code. The five internal modules share a validated persistence and archive boundary; Archive Lab and Khidma Desk remain independently maintained sub-apps launched from the same shell.
 3. **Shared capability contracts.** Promote a module only after two real use cases establish a stable contract. Existing candidates: Portable Archive, Record Vault and Khidma Core.
 4. **Adapters.** Providers implement narrow interfaces for identity, persistence, file/object storage, search, job execution, notifications and AI. Domain logic must not depend directly on a provider SDK.
 5. **Infrastructure.** GitHub for source/CI, Vercel for static hosting and previews, a selected database/auth service, and optional separate automation/design/media tools.
@@ -118,4 +118,4 @@ Supabase is a proposed first cloud-sync adapter, not yet provisioned for this pr
 
 ## Non-goals for this first slice
 
-No single sign-on, multi-user sync, cloud database, direct API OAuth, automation execution, online payments, encrypted vault, universal plugin runtime or AI agent execution is shipped by the shell. Each needs a separate threat model, permissions contract and acceptance tests.
+The Files & Documents module stores text/Markdown only; the Media Workbench tracks briefs and production stages rather than generating media. No single sign-on, multi-user sync, cloud database, direct API OAuth, automation execution, online payments, encrypted vault, universal plugin runtime or AI agent execution is shipped by the shell. Each needs a separate threat model, permissions contract and acceptance tests.
