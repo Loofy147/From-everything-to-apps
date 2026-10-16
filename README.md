@@ -10,9 +10,11 @@ The reference repository is research material—not an architecture we must pres
 |---|---|---|
 | Project charter and standards | Established | `docs/engineering-standards.md` |
 | Extraction and provenance process | Established | `docs/capability-extraction.md`, `docs/source-register.md` |
-| Portable Archive package | Candidate; core tests green | 15 archive tests pass; now exercised by Record Vault; browser execution and real restore workflow remain pending |
-| Record Vault | Candidate; local record workflow implemented | 15 focused tests cover persistence boundary, import rejection, migrations and conflicts; actual browser storage and recovery behaviour still need manual checks |
-| Archive Lab | Prototype | Static browser harness is committed; manual browser acceptance checklist remains open |
+| Portable Archive | Candidate | 15 focused tests pass; exported and restored through two consumers. SHA-256 is integrity-only, not authentication or encryption. |
+| Record Vault | Candidate | 15 focused tests pass; Chromium tests exercise local persistence, reload, export/import, tamper rejection and 390px layout. Cross-browser and browser-data-loss recovery remain open. |
+| Khidma Core | Candidate | 12 domain tests cover customers, job references, status transitions, DZD limits and manual payment totals. |
+| Archive Lab | Prototype | Chromium acceptance passes create/edit/reload/export/clear/restore/tamper rejection; used to verify portable data boundaries. |
+| Khidma Desk | Prototype | French/Arabic RTL service workflow; Chromium checks customer → job → status → payment → export/restore and tamper rejection. User research, cross-browser checks and recovery exercise remain open. |
 
 ## Engineering principles
 
@@ -40,11 +42,11 @@ npm ci
 npm test
 ```
 
-Run Portable Archive tests alone with `npm run test:portable-archive`. `npm run check` also syntax-checks package modules and the browser entry point. The core packages have no external runtime dependencies; Record Vault depends only on the local Portable Archive workspace package.
+Run focused checks with `npm run test:portable-archive` or `npm run test:khidma-core`. `npm run check` runs all unit tests, syntax checks, and a headless Chromium acceptance suite for Archive Lab and Khidma Desk. Core modules have no external runtime dependencies; domain packages import only local workspace code.
 
 ## Try the consumer harness
 
-From the repository root, start a static server with `python3 -m http.server 4173` and open `http://localhost:4173/apps/archive-lab/`. Follow `apps/archive-lab/README.md`. This is a local-only prototype using browser `localStorage`; it is not encrypted or production-ready. The manual browser checklist has not yet been marked complete.
+From the repository root, start a static server with `python3 -m http.server 4173` and open `http://localhost:4173/apps/archive-lab/` or `http://localhost:4173/apps/khidma-desk/`. See the application READMEs for limits. Both are local-only prototypes using unencrypted browser `localStorage`; they are not production-ready. Automated Chromium checks pass, while cross-browser validation and external-backup recovery remain open.
 
 ## Layout
 
