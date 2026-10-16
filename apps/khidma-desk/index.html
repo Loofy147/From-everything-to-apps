@@ -115,6 +115,17 @@
       </form>
     </dialog>
 
+    <dialog id="estimate-dialog" class="payment-dialog">
+      <form id="estimate-form">
+        <div class="section-heading"><div><p class="eyebrow" id="estimate-eyebrow">ESTIMATE</p><h2 id="estimate-heading">Set or update an estimate</h2></div><button class="icon-button" id="close-estimate" type="button" aria-label="Close">×</button></div>
+        <input id="estimate-job-id" type="hidden">
+        <label for="estimate-amount" id="estimate-amount-label">Estimated amount (DZD)</label>
+        <input id="estimate-amount" name="amountDzd" type="number" min="0" max="1000000000000" step="1" inputmode="numeric">
+        <p id="estimate-warning" class="field-note">This is an estimate, not an official invoice or compliant quotation.</p>
+        <div class="dialog-actions"><button class="button secondary" id="cancel-estimate" type="button">Cancel</button><button class="button primary" id="save-estimate" type="submit">Save estimate</button></div>
+      </form>
+    </dialog>
+
     <details class="limits">
       <summary id="limits-heading">Prototype limits and data handling</summary>
       <p id="limits-copy">This prototype uses unencrypted browser localStorage. Keep separate backup copies. Clearing browser site data may erase records. No information is sent to a server. Recorded payments are self-reported, and estimates are not legal or tax-compliant documents. Do not enter sensitive or irreplaceable data.</p>
