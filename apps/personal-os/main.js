@@ -354,6 +354,8 @@ function quickSearchEntries(query) {
   addRecords(data.research, 'research', 'Research', (item) => item.title, (item) => item.status === 'to-review' ? 'To review' : item.status === 'reviewed' ? 'Reviewed' : 'Actionable', (item) => '#research-' + item.id);
   addRecords(data.documents, 'files', 'Document', (item) => item.title, (item) => item.format.toUpperCase() + ' document', (item) => '#document-' + item.id);
   addRecords(data.media, 'media', 'Media', (item) => item.title, (item) => item.stage + ' · creative brief', (item) => '#media-' + item.id);
+  addRecords(data.observations, 'observations', 'Observation', (item) => item.title, (item) => item.severity + ' · ' + item.status, (item) => '#observation-' + item.id);
+  addRecords(data.vaultEntries, 'vault', 'Credential reference', (item) => item.label, (item) => item.provider + ' · ' + item.secretName, (item) => '#vault-entry-' + item.id);
   return entries.sort((a, b) => matchRank(a, query) - matchRank(b, query)).slice(0, 10);
 }
 
@@ -437,11 +439,17 @@ function renderPersonalDashboard() {
   const dueTasks = openTasks.filter((task) => task.dueDate && task.dueDate <= today);
   const reviewItems = data.research.filter((item) => item.status === 'to-review');
   const activeMedia = data.media.filter((item) => item.stage !== 'done');
+  const openObservations = data.observations.filter((item) => item.status === 'open' || item.status === 'actionable');
+  const rotationQueue = data.vaultEntries.filter((item) => item.status !== 'revoked' &&
+    (item.status === 'rotation-due' || (item.rotationDate && item.rotationDate <= today)));
 
   $('#dashboard-open-tasks').textContent = String(openTasks.length);
   $('#dashboard-due-tasks').textContent = String(dueTasks.length);
   $('#dashboard-review-count').textContent = String(reviewItems.length);
   $('#dashboard-media-active').textContent = String(activeMedia.length);
+  $('#dashboard-open-observations').textContent = String(openObservations.length);
+  $('#dashboard-rotation-due').textContent = String(rotationQueue.length);
+  $('#dashboard-integration-count').textContent = String(registry.integrations.length);
   $('#dashboard-storage-notice').hidden = data.storageHealthy;
 
   const nextTasks = [...openTasks].sort((a, b) => {
@@ -476,6 +484,24 @@ function renderPersonalDashboard() {
     (item) => item.stage.charAt(0).toUpperCase() + item.stage.slice(1),
     (item) => '#media-' + item.id
   );
+  const observationQueue = [...openObservations].sort((a, b) => {
+    const severityRank = { critical: 0, high: 1, medium: 2, low: 3, info: 4 };
+    return severityRank[a.severity] - severityRank[b.severity] || Date.parse(b.updatedAt) - Date.parse(a.updatedAt);
+  }).slice(0, 4);
+  renderDashboardList(
+    $('#dashboard-observations-list'), observationQueue, 'No open observations. Capture a finding, risk, incident or decision.', 'observations',
+    (item) => item.title,
+    (item) => item.severity.toUpperCase() + ' · ' + item.status,
+    (item) => '#observation-' + item.id
+  );
+  const credentialQueue = [...data.vaultEntries].filter((item) => item.status !== 'revoked' && item.rotationDate)
+    .sort((a, b) => a.rotationDate.localeCompare(b.rotationDate)).slice(0, 4);
+  renderDashboardList(
+    $('#dashboard-vault-list'), credentialQueue, 'No rotation dates recorded. Add a review date to track credential hygiene.', 'vault',
+    (item) => item.label,
+    (item) => item.rotationDate + ' · ' + item.secretName,
+    (item) => '#vault-entry-' + item.id
+  );
 }
 
 function renderOverview() {
@@ -498,7 +524,7 @@ function renderAll() {
   renderIntegrationView();
 }
 
-const viewTitles = { overview: 'Overview', apps: 'My apps', integrations: 'Integrations', architecture: 'System map', notes: 'Notes & Knowledge', board: 'Work Board', research: 'Research Library', files: 'Files & Documents', media: 'Media Workbench', data: 'Backup & Data' };
+const viewTitles = { overview: 'Control Center', apps: 'My apps', integrations: 'Integrations', vault: 'Keys & tokens', observations: 'Observations', architecture: 'System map', notes: 'Notes & Knowledge', board: 'Work Board', research: 'Research Library', files: 'Files & Documents', media: 'Media Workbench', data: 'Backup & Data' };
 function activateView(view, updateHash = true) {
   if (!Object.hasOwn(viewTitles, view)) view = 'overview';
   activeView = view;
@@ -596,7 +622,7 @@ function removeShortcut(id) {
 
 function bindEvents() {
   $$('[data-nav]').forEach((button) => button.addEventListener('click', () => activateView(button.dataset.nav)));
-  const quickCreateFocus = { notes: '#note-title', board: '#task-title', research: '#research-title-input', media: '#media-project-title' };
+  const quickCreateFocus = { notes: '#note-title', board: '#task-title', research: '#research-title-input', media: '#media-project-title', observations: '#observation-title', vault: '#vault-label' };
   $$('[data-quick-create]').forEach((button) => button.addEventListener('click', () => {
     const view = button.dataset.quickCreate;
     activateView(view);
@@ -644,6 +670,19 @@ function bindEvents() {
   });
   $('#theme-toggle').addEventListener('click', () => setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'));
   window.addEventListener('personal-os:datachange', () => renderAll());
+  window.addEventListener('personal-os:navigate', (event) => {
+    const view = event.detail?.view;
+    const targetSelector = event.detail?.target;
+    activateView(view || 'overview');
+    if (targetSelector) requestAnimationFrame(() => {
+      const target = document.querySelector(targetSelector);
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        target.setAttribute('tabindex', '-1');
+        target.focus({ preventScroll: true });
+      }
+    });
+  });
   $$('[data-app-filter]').forEach((button) => button.addEventListener('click', () => {
     appFilter = button.dataset.appFilter;
     $$('[data-app-filter]').forEach((item) => {
@@ -691,7 +730,7 @@ async function loadRegistry() {
     throw new Error('Registry shape or schema version is unsupported.');
   }
   for (const app of data.apps) {
-    const internalRoute = typeof app?.href === 'string' && /^#(notes|board|research|files|media|data)$/.test(app.href);
+    const internalRoute = typeof app?.href === 'string' && /^#(notes|board|research|files|media|data|vault|observations)$/.test(app.href);
     const externalAppPath = typeof app?.href === 'string' && app.href.startsWith('/') && !app.href.startsWith('//');
     if (!app || typeof app.id !== 'string' || typeof app.name !== 'string' ||
       typeof app.href !== 'string' || (!externalAppPath && !internalRoute)) {

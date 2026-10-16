@@ -28,6 +28,8 @@
         <button type="button" data-nav="overview" class="nav-item" aria-current="page"><span aria-hidden="true">◫</span> Overview</button>
         <button type="button" data-nav="apps" class="nav-item"><span aria-hidden="true">▦</span> My apps <span id="app-nav-count" class="nav-count">2</span></button>
         <button type="button" data-nav="integrations" class="nav-item"><span aria-hidden="true">⌘</span> Integrations <span id="integration-nav-count" class="nav-count">0</span></button>
+        <button type="button" data-nav="vault" class="nav-item"><span aria-hidden="true">▣</span> Keys & tokens <span id="vault-nav-count" class="nav-count">0</span></button>
+        <button type="button" data-nav="observations" class="nav-item"><span aria-hidden="true">◉</span> Observations <span id="observations-nav-count" class="nav-count">0</span></button>
         <button type="button" data-nav="architecture" class="nav-item"><span aria-hidden="true">⌬</span> System map</button>
       </nav>
       <div class="app-subnav" aria-label="Apps inside Personal OS">
@@ -60,7 +62,7 @@
           <div class="search-wrap">
             <label class="searchbox">
               <span aria-hidden="true">⌕</span>
-              <span class="sr-only">Search apps, notes, tasks, research, documents, media and integrations</span>
+              <span class="sr-only">Search apps, notes, tasks, research, documents, media, integrations, credential references and observations</span>
               <input id="global-search" type="search" placeholder="Search anything in your workspace…" autocomplete="off" aria-controls="global-search-results" aria-expanded="false" aria-autocomplete="list">
               <kbd>/</kbd>
             </label>
@@ -77,8 +79,8 @@
         <div class="welcome-row">
           <div>
             <p class="eyebrow">PERSONAL WORKSPACE · BUILD 001</p>
-            <h1 id="overview-title">One home for your working tools.</h1>
-            <p class="lede">A practical shell for apps, reusable capabilities and integrations. Start with what works, then connect services through replaceable adapters.</p>
+            <h1 id="overview-title">One control center for your work, services and signals.</h1>
+            <p class="lede">Bring projects, tasks, integrations, credential references, observations and decisions into one searchable workspace. The workspace connects the context; provider-managed stores protect the actual secrets.</p>
           </div>
           <span class="local-pill"><span class="status-dot" aria-hidden="true"></span> Personal · local-first</span>
         </div>
@@ -115,6 +117,8 @@
               <button class="button button-secondary" type="button" data-quick-create="board">＋ Task</button>
               <button class="button button-secondary" type="button" data-quick-create="research">＋ Research</button>
               <button class="button button-secondary" type="button" data-quick-create="media">＋ Brief</button>
+              <button class="button button-secondary" type="button" data-quick-create="observations">＋ Observation</button>
+              <button class="button button-secondary" type="button" data-quick-create="vault">＋ Credential reference</button>
             </div>
           </div>
           <div class="dashboard-stats" aria-label="Personal workspace activity">
@@ -140,6 +144,19 @@
               <div class="dashboard-panel-heading"><div><p class="eyebrow">CREATION</p><h3 id="dashboard-media-heading">Production queue</h3></div><button class="text-link" type="button" data-nav="media">Media Workbench →</button></div>
               <div id="dashboard-media-list" class="dashboard-list"><p class="dashboard-empty">Your creative projects will appear here.</p></div>
             </section>
+            <section class="dashboard-panel" aria-labelledby="dashboard-observations-heading">
+              <div class="dashboard-panel-heading"><div><p class="eyebrow">SIGNALS</p><h3 id="dashboard-observations-heading">Latest observations</h3></div><button class="text-link" type="button" data-nav="observations">Observation log →</button></div>
+              <div id="dashboard-observations-list" class="dashboard-list"><p class="dashboard-empty">Capture a finding, risk, decision or incident.</p></div>
+            </section>
+            <section class="dashboard-panel" aria-labelledby="dashboard-vault-heading">
+              <div class="dashboard-panel-heading"><div><p class="eyebrow">ACCESS HYGIENE</p><h3 id="dashboard-vault-heading">Credential rotation queue</h3></div><button class="text-link" type="button" data-nav="vault">Credential inventory →</button></div>
+              <div id="dashboard-vault-list" class="dashboard-list"><p class="dashboard-empty">No rotation dates recorded.</p></div>
+            </section>
+          </div>
+          <div class="operations-shortcuts" aria-label="Operations and security shortcuts">
+            <button class="operations-shortcut" type="button" data-nav="observations"><span class="operations-shortcut-icon">◉</span><span><strong id="dashboard-open-observations">0</strong><small>Open observations</small></span><span class="operations-shortcut-arrow">→</span></button>
+            <button class="operations-shortcut" type="button" data-nav="vault"><span class="operations-shortcut-icon">▣</span><span><strong id="dashboard-rotation-due">0</strong><small>Credentials to rotate</small></span><span class="operations-shortcut-arrow">→</span></button>
+            <button class="operations-shortcut" type="button" data-nav="integrations"><span class="operations-shortcut-icon">⌘</span><span><strong id="dashboard-integration-count">0</strong><small>Integration options</small></span><span class="operations-shortcut-arrow">→</span></button>
           </div>
           <p id="dashboard-storage-notice" class="dashboard-storage-notice" hidden>Some saved data could not be validated. Editing is blocked; recover from Backup & Data before continuing.</p>
         </section>
@@ -200,6 +217,60 @@
         <div id="integrations-grid" class="integration-grid"></div>
         <div id="integrations-empty" class="empty-state" hidden><strong>No matching integrations</strong><p>Try another name, capability or filter.</p></div>
         <p class="privacy-footnote">License labels are an initial repository-level screen, not legal advice or a dependency-wide license audit. Recheck the exact release, source directories, components, assets and commercial/enterprise exceptions before reusing code.</p>
+      </section>
+
+
+      <section id="view-observations" class="view" aria-labelledby="observations-title" hidden>
+        <div class="view-heading"><div><p class="eyebrow">OPERATIONS LOG</p><h1 id="observations-title">Observations & decisions</h1><p class="lede">Capture findings, incidents, risks, ideas and decisions with evidence and links to the task that should follow.</p></div><button class="button button-primary" type="button" data-quick-create="observations">＋ New observation</button></div>
+        <div class="boundary-note"><div class="boundary-icon" aria-hidden="true">i</div><div><strong>Keep evidence and action connected.</strong><p>An observation is a signal, not just a note. Give it a state, severity, source when available, and a related task when it requires follow-up. This register is browser-local until identity and shared storage are implemented.</p></div></div>
+        <div class="workspace-columns operations-layout">
+          <form id="observation-form" class="panel app-form">
+            <div class="panel-title"><div><p class="eyebrow">OBSERVATION ENTRY</p><h2 id="observation-form-title">Capture an observation</h2></div><button id="observation-cancel-edit" class="text-link" type="button" hidden>Cancel edit</button></div>
+            <input id="observation-id" type="hidden">
+            <label for="observation-title">Title *</label><input id="observation-title" required maxlength="180" autocomplete="off" placeholder="What did you notice or decide?">
+            <label for="observation-kind">Type</label><select id="observation-kind"><option value="finding">Finding</option><option value="decision">Decision</option><option value="risk">Risk</option><option value="incident">Incident</option><option value="idea">Idea</option><option value="follow-up">Follow-up</option></select>
+            <div class="form-two-cols"><div><label for="observation-severity">Severity</label><select id="observation-severity"><option value="info">Info</option><option value="low">Low</option><option value="medium" selected>Medium</option><option value="high">High</option><option value="critical">Critical</option></select></div><div><label for="observation-status">State</label><select id="observation-status"><option value="open">Open</option><option value="reviewed">Reviewed</option><option value="actionable">Actionable</option><option value="resolved">Resolved</option></select></div></div>
+            <label for="observation-related-task">Related task</label><select id="observation-related-task"><option value="">No linked task</option></select>
+            <label for="observation-source-url">Evidence URL (optional)</label><input id="observation-source-url" type="url" maxlength="1000" placeholder="https://…">
+            <label for="observation-tags">Tags</label><input id="observation-tags" maxlength="180" placeholder="service, issue, product">
+            <label for="observation-details">Details / evidence *</label><textarea id="observation-details" rows="5" maxlength="20000" required placeholder="What happened, what supports the conclusion, and what remains uncertain?"></textarea>
+            <div class="form-actions"><button class="button button-primary" type="submit">Save observation</button><button id="observation-reset" class="button button-secondary" type="button">Clear form</button></div>
+          </form>
+          <section class="panel collection-panel" aria-labelledby="observations-collection-heading">
+            <div class="panel-title"><div><p class="eyebrow">OBSERVATION REGISTER</p><h2 id="observations-collection-heading">Signals & decisions</h2></div><span id="observations-count" class="count">0</span></div>
+            <label for="observations-search">Filter observations</label><input id="observations-search" type="search" placeholder="Search evidence, state, type or tags…">
+            <div id="observations-list" class="collection-list"><p class="empty-state">No observations yet.</p></div>
+          </section>
+        </div>
+      </section>
+
+      <section id="view-vault" class="view" aria-labelledby="vault-title" hidden>
+        <div class="view-heading"><div><p class="eyebrow">ACCESS & SECRET HYGIENE</p><h1 id="vault-title">Keys, tokens & credentials</h1><p class="lede">One inventory for credential purpose, provider, scopes, storage location, rotation date and related work. Secret values never enter this page.</p></div><button class="button button-primary" type="button" data-quick-create="vault">＋ Register credential</button></div>
+        <div class="connector-banner vault-banner">
+          <div class="connector-banner-icon" aria-hidden="true">▣</div>
+          <div><strong>Vault inventory only—not a secret manager.</strong><p>This prototype stores metadata in browser localStorage and includes that metadata in ordinary backups. Do not paste or upload a token here. Keep values in provider-managed secret stores, such as AppDeploy backend secrets, GitHub Actions secrets, Vercel environment variables or Supabase secrets. Secret create/read/revoke operations are not wired to this interface yet.</p></div>
+        </div>
+        <div class="workspace-columns operations-layout">
+          <form id="vault-form" class="panel app-form">
+            <div class="panel-title"><div><p class="eyebrow">CREDENTIAL REGISTER</p><h2 id="vault-form-title">Register a credential</h2></div><button id="vault-cancel-edit" class="text-link" type="button" hidden>Cancel edit</button></div>
+            <input id="vault-id" type="hidden">
+            <label for="vault-label">Credential label *</label><input id="vault-label" required maxlength="140" autocomplete="off" placeholder="e.g. GitHub release automation">
+            <label for="vault-provider">Provider *</label><input id="vault-provider" required maxlength="100" autocomplete="off" placeholder="GitHub, Supabase, Vercel…">
+            <label for="vault-secret-name">Secret / environment variable name *</label><input id="vault-secret-name" required maxlength="100" pattern="[A-Z_][A-Z0-9_]{0,99}" autocomplete="off" autocapitalize="characters" placeholder="GITHUB_TOKEN">
+            <p class="field-hint">Enter the reference name only. Never enter the actual key/token value.</p>
+            <label for="vault-purpose">Purpose & service scope</label><textarea id="vault-purpose" rows="3" maxlength="1200" placeholder="What uses it, why it exists, and its least-privilege purpose"></textarea>
+            <label for="vault-storage-location">Protected storage location</label><select id="vault-storage-location"><option value="appdeploy">AppDeploy backend secrets</option><option value="github-actions">GitHub Actions secrets</option><option value="vercel">Vercel environment variables</option><option value="supabase">Supabase secrets</option><option value="other">Other / external vault</option></select>
+            <label for="vault-scopes">Permissions / scopes</label><input id="vault-scopes" maxlength="1200" placeholder="repo:read, deployments:write">
+            <div class="form-two-cols"><div><label for="vault-rotation-date">Rotate / review by</label><input id="vault-rotation-date" type="date"></div><div><label for="vault-status">Inventory state</label><select id="vault-status"><option value="planned">Reference planned</option><option value="configured">Recorded in provider</option><option value="rotation-due">Rotation due</option><option value="revoked">Revoked at provider</option></select></div></div>
+            <label for="vault-related-task">Related task</label><select id="vault-related-task"><option value="">No linked task</option></select>
+            <div class="form-actions"><button class="button button-primary" type="submit">Save metadata</button><button id="vault-reset" class="button button-secondary" type="button">Clear form</button></div>
+          </form>
+          <section class="panel collection-panel" aria-labelledby="vault-collection-heading">
+            <div class="panel-title"><div><p class="eyebrow">CREDENTIAL INVENTORY</p><h2 id="vault-collection-heading">Registered references</h2></div><span id="vault-count" class="count">0</span></div>
+            <label for="vault-search">Filter credentials</label><input id="vault-search" type="search" placeholder="Search provider, variable name, purpose or scope…">
+            <div id="vault-list" class="collection-list"><p class="empty-state">No credential references yet.</p></div>
+          </section>
+        </div>
       </section>
 
       <section id="view-architecture" class="view" aria-labelledby="architecture-title" hidden>
@@ -350,13 +421,15 @@
           <article class="metric-card"><div class="metric-icon icon-amber">▱</div><div><span>Projects</span><strong id="data-project-count">0</strong><small>Workstreams</small></div></article>
           <article class="metric-card"><div class="metric-icon icon-blue">▧</div><div><span>Documents</span><strong id="data-document-count">0</strong><small>Markdown / text files</small></div></article>
           <article class="metric-card"><div class="metric-icon icon-violet">▶</div><div><span>Media projects</span><strong id="data-media-count">0</strong><small>Production briefs</small></div></article>
+          <article class="metric-card"><div class="metric-icon icon-blue">◉</div><div><span>Observations</span><strong id="data-observation-count">0</strong><small>Evidence and decisions</small></div></article>
+          <article class="metric-card"><div class="metric-icon icon-amber">▣</div><div><span>Credential records</span><strong id="data-vault-count">0</strong><small>Metadata only, no values</small></div></article>
         </div>
         <div class="data-action-grid">
           <article class="panel data-action-card"><div class="data-action-icon">↧</div><h2>Export backup</h2><p>Download a versioned JSON archive of notes, projects, tasks and research, with a SHA-256 integrity digest.</p><button id="export-suite-backup" class="button button-primary" type="button">Download backup</button></article>
-          <article class="panel data-action-card"><div class="data-action-icon">↥</div><h2>Restore backup</h2><p>Verify archive format, checksum, schema and all six data collections before replacing the current Personal OS app data.</p><label class="button button-secondary file-button" for="import-suite-backup">Choose backup file</label><input id="import-suite-backup" type="file" accept=".json,application/json" hidden><p id="backup-file-status" class="field-hint">Current data remains unchanged unless validation and the storage write both succeed.</p></article>
-          <article class="panel data-action-card"><div class="data-action-icon">⌫</div><h2>Clear app data</h2><p>Remove this browser’s Notes, Work Board, Research, Documents and Media records. This cannot be undone without an exported backup.</p><button id="clear-suite-data" class="button button-secondary" type="button">Clear app data…</button></article>
+          <article class="panel data-action-card"><div class="data-action-icon">↥</div><h2>Restore backup</h2><p>Verify archive format, checksum, schema and all eight data collections before replacing the current workspace records. Only credential metadata is included, never secret values.</p><label class="button button-secondary file-button" for="import-suite-backup">Choose backup file</label><input id="import-suite-backup" type="file" accept=".json,application/json" hidden><p id="backup-file-status" class="field-hint">Current data remains unchanged unless validation and the storage write both succeed.</p></article>
+          <article class="panel data-action-card"><div class="data-action-icon">⌫</div><h2>Clear app data</h2><p>Remove this browser’s workspace records, including observations and credential inventory metadata. This cannot be undone without an exported backup.</p><button id="clear-suite-data" class="button button-secondary" type="button">Clear app data…</button></article>
         </div>
-        <div class="boundary-note"><div class="boundary-icon" aria-hidden="true">!</div><div><strong>Personal prototype, not secure vault storage</strong><p>Data uses browser localStorage without encryption, account protection or cloud sync. Do not store passwords, authentication tokens, or sensitive customer records. An SHA-256 checksum detects accidental archive modification; it does not authenticate the author or protect confidentiality.</p></div></div>
+        <div class="boundary-note"><div class="boundary-icon" aria-hidden="true">!</div><div><strong>Browser-local records are not a secure vault or shared database</strong><p>Task, observation and credential inventory metadata use browser localStorage without encryption, account protection or cloud sync. Actual keys and tokens are not collected or stored; manage their values directly at the selected provider. An SHA-256 checksum detects accidental archive modification; it does not authenticate the author or protect confidentiality.</p></div></div>
       </section>
 
       <footer class="main-footer"><span>Personal OS · privately operated prototype</span><span>Local personal-app data · no backend configured</span></footer>
