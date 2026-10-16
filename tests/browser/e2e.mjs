@@ -159,7 +159,14 @@ try {
   assert.ok(shellMetrics.scrollWidth <= shellMetrics.width, 'Personal OS desktop layout has horizontal overflow.');
   assert.equal(await evaluate("document.querySelector('#dashboard-open-tasks')?.textContent"), '0');
   assert.ok(await evaluate("document.querySelector('#dashboard-title')?.textContent.includes('Your day')"), 'Personal OS overview should open on the live workspace dashboard.');
-  console.log('PASS Personal OS root entry, live dashboard, app registry, capability modules and integration catalog render');
+  await evaluate("document.querySelector('[data-quick-create=notes]').click(); true");
+  await waitFor("!document.querySelector('#view-notes')?.hidden && document.activeElement?.id === 'note-title'", 'dashboard quick-create opens the Notes editor');
+  await evaluate("document.querySelector('[data-nav=overview]').click(); true");
+  await cdp.send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true }, session);
+  const mobileDashboard = await evaluate("({width:innerWidth,scrollWidth:document.documentElement.scrollWidth})");
+  assert.ok(mobileDashboard.scrollWidth <= mobileDashboard.width, 'Personal OS mobile dashboard has horizontal overflow: viewport ' + mobileDashboard.width + ', document ' + mobileDashboard.scrollWidth);
+  await cdp.send('Emulation.clearDeviceMetricsOverride', {}, session);
+  console.log('PASS Personal OS root entry, live dashboard, quick-create actions, mobile layout, app registry and integration catalog render');
 
   await evaluate("document.querySelector('[data-nav=integrations]').click(); true");
   await waitFor("!document.querySelector('#view-integrations')?.hidden && document.querySelectorAll('#integrations-grid .integration-card').length >= 15", 'Personal OS integrations view');
@@ -283,6 +290,12 @@ try {
   await waitFor("document.querySelector('#global-status')?.dataset.kind === 'error' && document.querySelector('#global-status')?.textContent.includes('Backup rejected')", 'tampered Personal OS backup rejection');
   assert.equal(await evaluate("localStorage.getItem('personal-os.suite-data.v1')"), beforeTamperedImport, 'A tampered backup must not overwrite current Personal OS data.');
   console.log('PASS tampered Personal OS archive is rejected without overwriting data');
+
+  const invalidDomainBackup = await evaluate("(async () => { const { createArchive } = await import('/packages/portable-archive/src/index.js'); const current = JSON.parse(localStorage.getItem('personal-os.suite-data.v1')); const invalid = { ...current, tasks: current.tasks.map(task => ({ ...task, projectId: 'missing-project' })) }; const archive = await createArchive({ appId: 'personal-os', schemaVersion: 1, data: invalid }); return JSON.stringify(archive); })()");
+  await uploadPersonalOsBackup(invalidDomainBackup, 'invalid-domain-personal-os.json');
+  await waitFor("document.querySelector('#global-status')?.dataset.kind === 'error' && document.querySelector('#global-status')?.textContent.includes('Backup rejected')", 'correctly checksummed but invalid Personal OS data rejection');
+  assert.equal(await evaluate("localStorage.getItem('personal-os.suite-data.v1')"), beforeTamperedImport, 'A domain-invalid archive must preserve the current Personal OS dataset.');
+  console.log('PASS valid-digest archive with invalid project references is rejected without data loss');
 
   await evaluate("document.querySelector('#clear-suite-data').click(); true");
   await waitFor("JSON.parse(localStorage.getItem('personal-os.suite-data.v1') || '{}').notes?.length === 0 && JSON.parse(localStorage.getItem('personal-os.suite-data.v1') || '{}').tasks?.length === 0", 'Personal OS clear app data');
