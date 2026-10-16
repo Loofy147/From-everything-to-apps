@@ -151,9 +151,9 @@ try {
   const personalOsRoot = new URL('/', web.url).toString();
   await cdp.send('Page.navigate', { url: personalOsRoot }, session);
   await waitFor("location.pathname === '/apps/personal-os/' && document.querySelector('#overview-title')?.textContent.includes('One home')", 'Personal OS root redirect and boot');
-  await waitFor("document.querySelectorAll('#overview-app-grid .app-card').length === 2", 'Personal OS app registry');
+  await waitFor("document.querySelectorAll('#overview-app-grid .app-card').length === 3", 'Personal OS app registry');
   const shellMetrics = await evaluate("({title:document.title,apps:document.querySelectorAll('#overview-app-grid .app-card').length,modules:document.querySelectorAll('#overview-module-grid .module-card').length,integrations:Number(document.querySelector('#metric-integrations')?.textContent),width:innerWidth,scrollWidth:document.documentElement.scrollWidth})");
-  assert.equal(shellMetrics.apps, 2);
+  assert.equal(shellMetrics.apps, 3);
   assert.equal(shellMetrics.modules, 3);
   assert.ok(shellMetrics.integrations >= 15, 'Expected a useful integration and license catalog.');
   assert.ok(shellMetrics.scrollWidth <= shellMetrics.width, 'Personal OS desktop layout has horizontal overflow.');
@@ -167,7 +167,7 @@ try {
   await evaluate("(() => { const search=document.querySelector('#global-search'); search.value='supabase'; search.dispatchEvent(new Event('input',{bubbles:true})); return true; })()");
   await waitFor("document.querySelectorAll('#integrations-grid .integration-card').length === 1 && document.querySelector('#integrations-grid .integration-card h3')?.textContent === 'Supabase'", 'Personal OS integration search');
   await evaluate("(() => { const search=document.querySelector('#global-search'); search.value=''; search.dispatchEvent(new Event('input',{bubbles:true})); document.querySelector('[data-nav=apps]').click(); return true; })()");
-  await waitFor("!document.querySelector('#view-apps')?.hidden && document.querySelectorAll('#apps-grid > a.app-card').length === 2", 'Personal OS apps view');
+  await waitFor("!document.querySelector('#view-apps')?.hidden && document.querySelectorAll('#apps-grid > a.app-card').length === 8", 'Personal OS apps view');
   console.log('PASS integration filters/search distinguish workspace tools from app-side connections');
 
   await evaluate("document.querySelector('#add-shortcut').click(); true");
@@ -194,6 +194,92 @@ try {
   await cdp.send('Emulation.clearDeviceMetricsOverride', {}, session);
   console.log('PASS Personal OS custom shortcut save/reload/remove, URL validation, theme persistence and 390px layout');
 
+  await evaluate("document.querySelector('[data-nav=notes]').click(); true");
+  await waitFor("!document.querySelector('#view-notes')?.hidden", 'Notes & Knowledge view');
+  await evaluate("(() => { document.querySelector('#note-title').value='E2E product principle'; document.querySelector('#note-tags').value='product, decisions'; document.querySelector('#note-body').value='Keep each app small, testable and portable.'; document.querySelector('#note-form').requestSubmit(); return true; })()");
+  await waitFor("JSON.parse(localStorage.getItem('personal-os.suite-data.v1') || '{}').notes?.length === 1 && document.querySelector('#notes-list .note-card h3')?.textContent === 'E2E product principle'", 'Personal OS note create and persistence');
+  await evaluate("document.querySelector('#notes-list button[data-action=note-pin]').click(); true");
+  await waitFor("JSON.parse(localStorage.getItem('personal-os.suite-data.v1') || '{}').notes?.[0]?.pinned === true", 'Personal OS pin note');
+
+  await evaluate("document.querySelector('[data-nav=board]').click(); true");
+  await waitFor("!document.querySelector('#view-board')?.hidden", 'Work Board view');
+  await evaluate("(() => { document.querySelector('#project-name').value='E2E Personal OS'; document.querySelector('#project-description').value='Build and verify internal apps.'; document.querySelector('#project-form').requestSubmit(); return true; })()");
+  await waitFor("JSON.parse(localStorage.getItem('personal-os.suite-data.v1') || '{}').projects?.length === 1 && document.querySelector('#project-list').textContent.includes('E2E Personal OS')", 'Work Board project create');
+  await evaluate("(() => { const data=JSON.parse(localStorage.getItem('personal-os.suite-data.v1')); document.querySelector('#task-title').value='Verify app recovery'; document.querySelector('#task-project').value=data.projects[0].id; document.querySelector('#task-priority').value='high'; document.querySelector('#task-notes').value='Export, clear, restore and compare.'; document.querySelector('#task-form').requestSubmit(); return true; })()");
+  await waitFor("JSON.parse(localStorage.getItem('personal-os.suite-data.v1') || '{}').tasks?.length === 1 && document.querySelector('#todo-tasks').textContent.includes('Verify app recovery')", 'Work Board task create');
+  await evaluate("document.querySelector('#todo-tasks button[data-action=task-advance]').click(); true");
+  await waitFor("JSON.parse(localStorage.getItem('personal-os.suite-data.v1') || '{}').tasks?.[0]?.status === 'doing'", 'Work Board start task');
+  await evaluate("document.querySelector('#doing-tasks button[data-action=task-advance]').click(); true");
+  await waitFor("JSON.parse(localStorage.getItem('personal-os.suite-data.v1') || '{}').tasks?.[0]?.status === 'done' && document.querySelector('#done-tasks').textContent.includes('Verify app recovery')", 'Work Board task completion');
+
+  await evaluate("document.querySelector('[data-nav=research]').click(); true");
+  await waitFor("!document.querySelector('#view-research')?.hidden", 'Research Library view');
+  await evaluate("(() => { document.querySelector('#research-title-input').value='Research test source'; document.querySelector('#research-url').value='javascript:alert(1)'; document.querySelector('#research-summary').value='This URL must be rejected.'; document.querySelector('#research-form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})); return true; })()");
+  await waitFor("document.querySelector('#global-status')?.dataset.kind === 'error' && document.querySelector('#global-status')?.textContent.includes('HTTP or HTTPS')", 'Research Library unsafe URL rejection');
+  assert.equal(await evaluate("JSON.parse(localStorage.getItem('personal-os.suite-data.v1') || '{}').research?.length"), 0, 'Unsafe source URL must not be persisted.');
+  await evaluate("(() => { document.querySelector('#research-url').value='https://example.com/architecture'; document.querySelector('#research-status').value='actionable'; document.querySelector('#research-tags').value='architecture, evidence'; document.querySelector('#research-summary').value='Capture decisions with source links and explicit limitations.'; document.querySelector('#research-form').requestSubmit(); return true; })()");
+  await waitFor("JSON.parse(localStorage.getItem('personal-os.suite-data.v1') || '{}').research?.length === 1 && document.querySelector('#research-list').textContent.includes('Research test source')", 'Research Library save and persistence');
+
+  await evaluate("document.querySelector('[data-nav=files]').click(); true");
+  await waitFor("!document.querySelector('#view-files')?.hidden", 'Files & Documents view');
+  await evaluate("(() => { document.querySelector('#document-title').value='E2E Decision Brief'; document.querySelector('#document-format').value='md'; document.querySelector('#document-tags').value='decisions, product'; document.querySelector('#document-content').value='# Decision brief\\n\\nKeep the application modular and portable.'; document.querySelector('#document-form').requestSubmit(); return true; })()");
+  await waitFor("JSON.parse(localStorage.getItem('personal-os.suite-data.v1') || '{}').documents?.length === 1 && document.querySelector('#documents-list').textContent.includes('E2E Decision Brief.md')", 'Files & Documents create and persistence');
+  await evaluate("document.querySelector('#documents-list button[data-action=document-download]').click(); true");
+  const documentName = await until(async () => {
+    const files = await readdir(downloads);
+    return files.find((name) => name === 'E2E-Decision-Brief.md' && !name.endsWith('.crdownload'));
+  }, 'individual Markdown download', 15000);
+  const downloadedDocument = await readFile(path.join(downloads, documentName), 'utf8');
+  assert.ok(downloadedDocument.includes('Keep the application modular and portable.'), 'Downloaded Markdown should preserve document content.');
+  console.log('PASS Files & Documents creates and exports a Markdown document');
+
+  await evaluate("document.querySelector('[data-nav=media]').click(); true");
+  await waitFor("!document.querySelector('#view-media')?.hidden", 'Media Workbench view');
+  await evaluate("(() => { document.querySelector('#media-project-title').value='E2E Product Launch Reel'; document.querySelector('#media-format').value='short-video'; document.querySelector('#media-stage').value='brief'; document.querySelector('#media-brief').value='Audience: potential customers. Show the product workflow and close with a clear call to action.'; document.querySelector('#media-next-action').value='Create a 20-second storyboard and collect product screenshots.'; document.querySelector('#media-output-url').value='https://example.com/creative-brief'; document.querySelector('#media-tags').value='product, launch'; document.querySelector('#media-form').requestSubmit(); return true; })()");
+  await waitFor("JSON.parse(localStorage.getItem('personal-os.suite-data.v1') || '{}').media?.length === 1 && document.querySelector('#media-list').textContent.includes('E2E Product Launch Reel')", 'Media Workbench create and persistence');
+  await evaluate("(() => { const select=document.querySelector('#media-list select[data-action=media-stage]'); select.value='script'; select.dispatchEvent(new Event('change',{bubbles:true})); return true; })()");
+  await waitFor("JSON.parse(localStorage.getItem('personal-os.suite-data.v1') || '{}').media?.[0]?.stage === 'script'", 'Media Workbench production stage update');
+  console.log('PASS Media Workbench stores creative briefs, output links and production stages');
+
+  async function uploadPersonalOsBackup(text, filename) {
+    const expression = "(async () => { const input=document.querySelector('#import-suite-backup'); const dt=new DataTransfer(); dt.items.add(new File([" + JSON.stringify(text) + "], " + JSON.stringify(filename) + ", {type:'application/json'})); input.files=dt.files; input.dispatchEvent(new Event('change',{bubbles:true})); return true; })()";
+    await evaluate(expression);
+  }
+  await evaluate("document.querySelector('[data-nav=data]').click(); true");
+  await waitFor("!document.querySelector('#view-data')?.hidden", 'Backup & Data view');
+  await evaluate("document.querySelector('#export-suite-backup').click(); true");
+  const backupName = await until(async () => {
+    const files = await readdir(downloads);
+    return files.find((name) => name.startsWith('personal-os-backup-') && !name.endsWith('.crdownload'));
+  }, 'Personal OS backup download', 15000);
+  const backupText = await readFile(path.join(downloads, backupName), 'utf8');
+  const personalOsArchive = JSON.parse(backupText);
+  assert.equal(personalOsArchive.format, 'from-everything-to-apps/portable-archive');
+  assert.equal(personalOsArchive.appId, 'personal-os');
+  assert.equal(personalOsArchive.data.notes.length, 1);
+  assert.equal(personalOsArchive.data.projects.length, 1);
+  assert.equal(personalOsArchive.data.tasks.length, 1);
+  assert.equal(personalOsArchive.data.research.length, 1);
+  assert.equal(personalOsArchive.data.documents.length, 1);
+  assert.equal(personalOsArchive.data.media.length, 1);
+  console.log('PASS Personal OS data export produces a versioned SHA-256 archive of all six internal-app data collections');
+
+  const beforeTamperedImport = await evaluate("localStorage.getItem('personal-os.suite-data.v1')");
+  const tamperedArchive = JSON.parse(backupText);
+  tamperedArchive.data.notes[0].title = 'TAMPERED TITLE';
+  await uploadPersonalOsBackup(JSON.stringify(tamperedArchive), 'tampered-personal-os.json');
+  await waitFor("document.querySelector('#global-status')?.dataset.kind === 'error' && document.querySelector('#global-status')?.textContent.includes('Backup rejected')", 'tampered Personal OS backup rejection');
+  assert.equal(await evaluate("localStorage.getItem('personal-os.suite-data.v1')"), beforeTamperedImport, 'A tampered backup must not overwrite current Personal OS data.');
+  console.log('PASS tampered Personal OS archive is rejected without overwriting data');
+
+  await evaluate("document.querySelector('#clear-suite-data').click(); true");
+  await waitFor("JSON.parse(localStorage.getItem('personal-os.suite-data.v1') || '{}').notes?.length === 0 && JSON.parse(localStorage.getItem('personal-os.suite-data.v1') || '{}').tasks?.length === 0", 'Personal OS clear app data');
+  await uploadPersonalOsBackup(backupText, 'personal-os-backup-verified.json');
+  await waitFor("JSON.parse(localStorage.getItem('personal-os.suite-data.v1') || '{}').notes?.length === 1 && JSON.parse(localStorage.getItem('personal-os.suite-data.v1') || '{}').projects?.length === 1 && JSON.parse(localStorage.getItem('personal-os.suite-data.v1') || '{}').tasks?.[0]?.status === 'done' && JSON.parse(localStorage.getItem('personal-os.suite-data.v1') || '{}').research?.length === 1 && JSON.parse(localStorage.getItem('personal-os.suite-data.v1') || '{}').documents?.length === 1 && JSON.parse(localStorage.getItem('personal-os.suite-data.v1') || '{}').media?.[0]?.stage === 'script'", 'Personal OS verified backup restoration', 15000);
+  console.log('PASS Personal OS backup restores all six data collections after clearing the suite data');
+
+  // Keep the Archive Lab download assertion isolated from the Personal OS backup file.
+  await rm(path.join(downloads, backupName), { force: true });
   await cdp.send('Page.navigate', { url: web.url }, session);
   await waitFor("document.readyState === 'complete' && document.querySelector('#status')?.textContent.includes('Local record store ready')", 'Archive Lab boot');
   console.log('PASS browser boot and local store initialization');

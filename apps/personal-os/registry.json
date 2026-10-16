@@ -36,6 +36,114 @@
         "Recovery"
       ],
       "kind": "built-in"
+    },
+    {
+      "id": "personal-notes",
+      "name": "Notes & Knowledge",
+      "category": "Personal",
+      "description": "Capture and pin notes, use tags, and search working knowledge locally.",
+      "href": "#notes",
+      "status": "prototype",
+      "statusLabel": "Local app",
+      "storage": "Personal OS local store",
+      "icon": "N",
+      "theme": "violet",
+      "tags": [
+        "Notes",
+        "Knowledge",
+        "Tags"
+      ],
+      "kind": "built-in"
+    },
+    {
+      "id": "work-board",
+      "name": "Work Board",
+      "category": "Productivity",
+      "description": "Create projects, manage tasks, set priorities and due dates, and move work through a simple board.",
+      "href": "#board",
+      "status": "prototype",
+      "statusLabel": "Local app",
+      "storage": "Personal OS local store",
+      "icon": "W",
+      "theme": "blue",
+      "tags": [
+        "Projects",
+        "Tasks",
+        "Priorities"
+      ],
+      "kind": "built-in"
+    },
+    {
+      "id": "research-library",
+      "name": "Research Library",
+      "category": "Research",
+      "description": "Save source URLs, summaries, tags and review status for research and implementation decisions.",
+      "href": "#research",
+      "status": "prototype",
+      "statusLabel": "Local app",
+      "storage": "Personal OS local store",
+      "icon": "R",
+      "theme": "lime",
+      "tags": [
+        "Sources",
+        "Research",
+        "Evidence"
+      ],
+      "kind": "built-in"
+    },
+    {
+      "id": "data-center",
+      "name": "Backup & Data",
+      "category": "Data tools",
+      "description": "Export and restore app records through the shared versioned portable-archive contract.",
+      "href": "#data",
+      "status": "prototype",
+      "statusLabel": "Local app",
+      "storage": "Personal OS local store",
+      "icon": "D",
+      "theme": "amber",
+      "tags": [
+        "JSON",
+        "SHA-256",
+        "Restore"
+      ],
+      "kind": "built-in"
+    },
+    {
+      "id": "files-documents",
+      "name": "Files & Documents",
+      "category": "Personal",
+      "description": "Create, edit, import and download Markdown/text documents in the shared local workspace.",
+      "href": "#files",
+      "status": "prototype",
+      "statusLabel": "Local app",
+      "storage": "Personal OS local store",
+      "icon": "F",
+      "theme": "blue",
+      "tags": [
+        "Markdown",
+        "Text files",
+        "Documents"
+      ],
+      "kind": "built-in"
+    },
+    {
+      "id": "media-workbench",
+      "name": "Media Workbench",
+      "category": "Creative",
+      "description": "Manage creative briefs, next actions, deliverable links and video/audio production stages.",
+      "href": "#media",
+      "status": "prototype",
+      "statusLabel": "Local app",
+      "storage": "Personal OS local store",
+      "icon": "M",
+      "theme": "amber",
+      "tags": [
+        "Creative briefs",
+        "Production",
+        "Deliverables"
+      ],
+      "kind": "built-in"
     }
   ],
   "modules": [
