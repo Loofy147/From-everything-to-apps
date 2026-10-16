@@ -8,9 +8,12 @@ const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 const STATUSES = ['todo', 'doing', 'done'];
 const RESEARCH_STATUSES = ['to-review', 'reviewed', 'actionable'];
+const DOCUMENT_FORMATS = ['md', 'txt'];
+const MEDIA_FORMATS = ['short-video', 'advertisement', 'product-demo', 'presentation', 'audio', 'other'];
+const MEDIA_STAGES = ['brief', 'script', 'assets', 'edit', 'review', 'done'];
 const PRIORITIES = ['low', 'normal', 'high'];
 
-const emptyState = () => ({ schemaVersion: 1, notes: [], projects: [], tasks: [], research: [] });
+const emptyState = () => ({ schemaVersion: 1, notes: [], projects: [], tasks: [], research: [], documents: [], media: [] });
 let state = emptyState();
 let storageHealthy = true;
 let renderSearch = '';
@@ -92,13 +95,15 @@ function requireUniqueIds(items, label) {
 
 function validateState(candidate) {
   if (!isRecord(candidate) || candidate.schemaVersion !== 1) throw new Error('Unsupported Personal OS data schema.');
-  for (const key of ['notes', 'projects', 'tasks', 'research']) {
+  for (const key of ['notes', 'projects', 'tasks', 'research', 'documents', 'media']) {
     if (!Array.isArray(candidate[key])) throw new Error('Personal OS data is missing the ' + key + ' collection.');
   }
   requireUniqueIds(candidate.notes, 'Notes');
   requireUniqueIds(candidate.projects, 'Projects');
   requireUniqueIds(candidate.tasks, 'Tasks');
   requireUniqueIds(candidate.research, 'Research library');
+  requireUniqueIds(candidate.documents, 'Documents');
+  requireUniqueIds(candidate.media, 'Media projects');
 
   const projectIds = new Set(candidate.projects.map((project) => project.id));
   for (const note of candidate.notes) {
@@ -127,6 +132,23 @@ function validateState(candidate) {
       !RESEARCH_STATUSES.includes(item.status) || !validTags(item.tags) ||
       !boundedString(item.summary, 20000) || !validTimestamp(item.createdAt) ||
       !validTimestamp(item.updatedAt)) throw new Error('A research item has invalid fields or source URL.');
+  }
+
+  for (const document of candidate.documents) {
+    if (!isRecord(document) || !boundedString(document.title, 140, true) ||
+      !DOCUMENT_FORMATS.includes(document.format) || !boundedString(document.content, 50000, true) ||
+      !validTags(document.tags) || !validTimestamp(document.createdAt) ||
+      !validTimestamp(document.updatedAt)) throw new Error('A document has invalid fields or content.');
+  }
+  for (const item of candidate.media) {
+    if (!isRecord(item) || !boundedString(item.title, 180, true) ||
+      !MEDIA_FORMATS.includes(item.format) || !MEDIA_STAGES.includes(item.stage) ||
+      !boundedString(item.brief, 12000, true) || !boundedString(item.notes, 4000) ||
+      !(item.outputUrl === null || boundedString(item.outputUrl, 1000)) ||
+      !validSourceUrl(item.outputUrl) || !validTags(item.tags) ||
+      !validTimestamp(item.createdAt) || !validTimestamp(item.updatedAt)) {
+      throw new Error('A media project has invalid fields or output URL.');
+    }
   }
 
   const serialized = JSON.stringify(candidate);
@@ -532,6 +554,8 @@ function renderData() {
   $('#data-task-count').textContent = String(state.tasks.length);
   $('#data-research-count').textContent = String(state.research.length);
   $('#data-project-count').textContent = String(state.projects.length);
+  $('#data-document-count').textContent = String(state.documents.length);
+  $('#data-media-count').textContent = String(state.media.length);
   $('#backup-file-status').textContent = storageHealthy
     ? 'Current records are local to this browser. The archive includes notes, projects, tasks and research.'
     : 'Data validation failed. Restore a valid Personal OS backup or clear app data to recover.';
@@ -543,6 +567,8 @@ function renderAllApps() {
   renderProjects();
   renderBoard();
   renderResearch();
+  renderDocuments();
+  renderMedia();
   renderData();
   updateSafetyUI();
 }
