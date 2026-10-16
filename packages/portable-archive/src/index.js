@@ -62,7 +62,7 @@ function normalizeJsonValue(value, state = { nodes: 0, active: new WeakSet() }, 
         if (typeof key !== 'string') fail('invalid-data', `Symbol properties are not supported at ${path}.`);
         const descriptor = Object.getOwnPropertyDescriptor(value, key);
         if (!descriptor?.enumerable) fail('invalid-data', `Non-enumerable array properties are not supported at ${path}.${key}.`);
-        if (!/^(0|[1-9]\\d*)$/.test(key) || Number(key) >= value.length) {
+        if (!/^(0|[1-9]\d*)$/.test(key) || Number(key) >= value.length) {
           fail('invalid-data', `Custom array properties are not supported at ${path}.`);
         }
       }
@@ -118,7 +118,7 @@ function validatePositiveVersion(value, label) {
 }
 
 function validateIsoUtc(value) {
-  if (typeof value !== 'string' || !/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$/.test(value)) {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(value)) {
     fail('invalid-envelope', 'exportedAt must be a UTC ISO timestamp with milliseconds.');
   }
   const parsed = new Date(value);
@@ -189,7 +189,7 @@ export async function createArchive({
   };
   const digest = await sha256Hex(canonicalStringify(body));
   const envelope = { ...body, integrity: { algorithm: 'SHA-256', digest } };
-  const serialized = `${JSON.stringify(envelope, null, 2)}\\n`;
+  const serialized = `${JSON.stringify(envelope, null, 2)}\n`;
   if (utf8Length(serialized) > maxBytes) fail('archive-too-large', `Archive exceeds the ${maxBytes}-byte limit.`);
   return envelope;
 }
@@ -245,7 +245,7 @@ export async function stringifyArchive(input, { pretty = true, maxBytes = DEFAUL
   const envelope = await normalizeAndVerify(input, maxBytes);
   const text = JSON.stringify(envelope, null, pretty ? 2 : undefined);
   if (utf8Length(text) > maxBytes) fail('archive-too-large', `Serialized archive exceeds the ${maxBytes}-byte limit.`);
-  return `${text}\\n`;
+  return `${text}\n`;
 }
 
 /**
