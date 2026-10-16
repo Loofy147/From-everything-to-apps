@@ -121,6 +121,18 @@ function matchesQuery(value) {
   return !globalQuery || searchable(value).includes(globalQuery);
 }
 
+function matchRank(value, query = globalQuery) {
+  const q = query.trim().toLocaleLowerCase();
+  if (!q) return 0;
+  const name = String(value?.name || value?.title || '').toLocaleLowerCase();
+  if (name === q) return 0;
+  if (name.startsWith(q)) return 1;
+  if (name.includes(q)) return 2;
+  const category = String(value?.category || '').toLocaleLowerCase();
+  if (category.includes(q)) return 3;
+  return 4;
+}
+
 function appStatusClass(status) {
   if (status === 'prototype') return 'state-prototype';
   if (status === 'usable' || status === 'ready') return 'state-usable';
@@ -225,7 +237,7 @@ function createIntegrationCard(item) {
 
 function renderBuiltInApps(host, apps, limit = Infinity) {
   host.replaceChildren();
-  const filtered = apps.filter(matchesQuery).slice(0, limit);
+  const filtered = apps.filter(matchesQuery).sort((a, b) => matchRank(a) - matchRank(b)).slice(0, limit);
   filtered.forEach((app) => host.append(createAppCard(app)));
   return filtered.length;
 }
@@ -241,7 +253,7 @@ function renderAppView() {
     if (appFilter === 'ready' && item.kind !== 'built-in') return false;
     if (appFilter === 'shortcuts' && item.kind !== 'shortcut') return false;
     return matchesQuery(item);
-  });
+  }).sort((a, b) => matchRank(a) - matchRank(b));
   filtered.forEach((item) => {
     if (item.kind === 'shortcut') host.append(createAppCard(item, { removable: true }));
     else host.append(createAppCard(item));
@@ -263,7 +275,7 @@ function renderIntegrationView() {
     if (integrationFilter === 'open-source' && !item.kind.includes('open-source')) return false;
     if (integrationFilter === 'self-hosted' && !item.kind.includes('self-hosted')) return false;
     return matchesQuery(item);
-  });
+  }).sort((a, b) => matchRank(a) - matchRank(b));
   filtered.forEach((item) => host.append(createIntegrationCard(item)));
   $('#integration-result-count').textContent = filtered.length + (filtered.length === 1 ? ' integration' : ' integrations');
   $('#integrations-empty').hidden = filtered.length > 0;
@@ -342,7 +354,7 @@ function quickSearchEntries(query) {
   addRecords(data.research, 'research', 'Research', (item) => item.title, (item) => item.status === 'to-review' ? 'To review' : item.status === 'reviewed' ? 'Reviewed' : 'Actionable', (item) => '#research-' + item.id);
   addRecords(data.documents, 'files', 'Document', (item) => item.title, (item) => item.format.toUpperCase() + ' document', (item) => '#document-' + item.id);
   addRecords(data.media, 'media', 'Media', (item) => item.title, (item) => item.stage + ' · creative brief', (item) => '#media-' + item.id);
-  return entries.slice(0, 10);
+  return entries.sort((a, b) => matchRank(a, query) - matchRank(b, query)).slice(0, 10);
 }
 
 function navigateQuickResult(result) {
