@@ -1,0 +1,13 @@
+{
+  "name": "@from-everything-to-apps/portable-archive",
+  "version": "0.1.0",
+  "description": "A dependency-free, versioned JSON archive format with bounded imports and SHA-256 integrity checks.",
+  "type": "module",
+  "license": "MIT",
+  "engines": { "node": ">=22.12" },
+  "exports": "./src/index.js",
+  "scripts": {
+    "test": "node --test",
+    "test:coverage": "node --test"
+  }
+}
