@@ -1,0 +1,12 @@
+{
+  "name": "@from-everything-to-apps/khidma-core",
+  "version": "0.1.0",
+  "description": "Dependency-free domain rules and validation for the Khidma Desk prototype.",
+  "type": "module",
+  "license": "MIT",
+  "engines": { "node": ">=22.12" },
+  "exports": "./src/index.js",
+  "scripts": {
+    "test": "node --test"
+  }
+}
