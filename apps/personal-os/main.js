@@ -308,6 +308,114 @@ function renderDashboardList(host, items, emptyText, view, getTitle, getMeta, ge
   }
 }
 
+
+function quickSearchEntries(query) {
+  const q = query.toLocaleLowerCase();
+  const entries = [];
+  for (const app of registry.apps) {
+    if (searchable(app).toLocaleLowerCase().includes(q)) {
+      entries.push({ title: app.name, subtitle: app.category + ' · App', kind: 'app', view: app.href.startsWith('#') ? app.href.slice(1) : null, href: app.href, queryKey: app.name });
+    }
+  }
+  for (const shortcut of shortcuts) {
+    if (searchable(shortcut).includes(q)) entries.push({ title: shortcut.name, subtitle: shortcut.category + ' · Shortcut', kind: 'shortcut', href: shortcut.url });
+  }
+  for (const integration of registry.integrations) {
+    if (searchable(integration).includes(q)) entries.push({ title: integration.name, subtitle: integration.category + ' · Integration', kind: 'integration', view: 'integrations', queryKey: integration.name });
+  }
+  for (const module of registry.modules) {
+    if ([module.name, module.role, module.evidence].join(' ').toLocaleLowerCase().includes(q)) {
+      entries.push({ title: module.name, subtitle: 'Shared capability', kind: 'module', view: 'architecture', queryKey: module.name });
+    }
+  }
+
+  const data = getPersonalAppsSnapshot();
+  const addRecords = (items, view, kind, getTitle, getSummary, getTarget) => {
+    for (const item of items) {
+      const text = [getTitle(item), getSummary(item), ...(item.tags || [])].filter(Boolean).join(' ').toLocaleLowerCase();
+      if (text.includes(q)) entries.push({ title: getTitle(item), subtitle: kind + ' · ' + getSummary(item), kind: 'record', view, target: getTarget(item), queryKey: getTitle(item) });
+    }
+  };
+  addRecords(data.notes, 'notes', 'Note', (item) => item.title, (item) => item.pinned ? 'Pinned note' : 'Personal note', (item) => '#note-' + item.id);
+  addRecords(data.tasks, 'board', 'Task', (item) => item.title, (item) => item.status === 'todo' ? 'Next action' : item.status === 'doing' ? 'In progress' : 'Completed task', (item) => '#task-' + item.id);
+  addRecords(data.projects, 'board', 'Project', (item) => item.name, () => 'Workstream', (item) => '#project-' + item.id);
+  addRecords(data.research, 'research', 'Research', (item) => item.title, (item) => item.status === 'to-review' ? 'To review' : item.status === 'reviewed' ? 'Reviewed' : 'Actionable', (item) => '#research-' + item.id);
+  addRecords(data.documents, 'files', 'Document', (item) => item.title, (item) => item.format.toUpperCase() + ' document', (item) => '#document-' + item.id);
+  addRecords(data.media, 'media', 'Media', (item) => item.title, (item) => item.stage + ' · creative brief', (item) => '#media-' + item.id);
+  return entries.slice(0, 10);
+}
+
+function navigateQuickResult(result) {
+  const input = $('#global-search');
+  const host = $('#global-search-results');
+  host.hidden = true;
+  input.setAttribute('aria-expanded', 'false');
+  if (result.kind === 'shortcut') {
+    window.location.assign(result.href);
+    return;
+  }
+  if (result.kind === 'app' && !result.view) {
+    window.location.assign(result.href);
+    return;
+  }
+  if (result.kind === 'record') {
+    activateView(result.view);
+    globalQuery = '';
+    input.value = '';
+    renderAll();
+    requestAnimationFrame(() => {
+      const target = document.querySelector(result.target);
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        target.setAttribute('tabindex', '-1');
+        target.focus({ preventScroll: true });
+      }
+    });
+    return;
+  }
+  activateView(result.view || 'overview');
+  input.value = result.kind === 'integration' ? result.queryKey : '';
+  applySearch(input.value);
+  renderQuickSearch();
+  input.focus();
+}
+
+function renderQuickSearch() {
+  const input = $('#global-search');
+  const host = $('#global-search-results');
+  const query = input.value.trim();
+  if (!query) {
+    host.replaceChildren();
+    host.hidden = true;
+    input.setAttribute('aria-expanded', 'false');
+    input.removeAttribute('aria-activedescendant');
+    return;
+  }
+  const results = quickSearchEntries(query);
+  host.replaceChildren();
+  if (!results.length) {
+    host.append(node('p', 'quick-search-empty', 'No matching apps or saved items.'));
+  } else {
+    results.forEach((result, index) => {
+      const item = node('button', 'quick-search-result');
+      item.type = 'button';
+      item.id = 'quick-search-result-' + index;
+      item.setAttribute('role', 'option');
+      item.setAttribute('aria-selected', 'false');
+      item.append(
+        node('span', 'quick-search-kind', result.kind === 'record' ? result.subtitle.split(' · ')[0] : result.kind),
+        node('span', 'quick-search-copy', result.title),
+        node('span', 'quick-search-subtitle', result.subtitle)
+      );
+      item.addEventListener('click', () => navigateQuickResult(result));
+      host.append(item);
+    });
+  }
+  host.hidden = false;
+  input.setAttribute('aria-expanded', 'true');
+  input.removeAttribute('aria-activedescendant');
+}
+
 function renderPersonalDashboard() {
   const data = getPersonalAppsSnapshot();
   const current = new Date();
